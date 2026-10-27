@@ -2,7 +2,7 @@
  "name": "CTQ Marcador",
  "short_name": "CTQ",
  "description": "Marcador de tenis con voz",
- "start_url": "./ctq-marcador-celular.html",
+ "start_url": "./",
  "scope": "./",
  "display": "standalone",
  "orientation": "portrait",
