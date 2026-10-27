@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#060d1a">
@@ -79,13 +79,23 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 .reset-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:8px 14px;font-family:'Inter',sans-serif;cursor:pointer;}
 .reset-btn:active{color:var(--red);border-color:var(--red);}
 .waiting{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+body{display:flex;flex-direction:column;height:100dvh;}
+#setup{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:max(28px,env(safe-area-inset-bottom));}
+#setup>*{flex-shrink:0;}
+#board{height:auto;flex:1;min-height:0;}
+.topbar{padding-top:max(12px,env(safe-area-inset-top));}
+.bottom{flex-wrap:wrap;gap:8px;justify-content:center;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.sb-row{cursor:pointer;-webkit-user-select:none;user-select:none;padding:30px 18px;}
+.sb-row:active{transform:scale(.985);}
+.tap-hint{text-align:center;font-size:11px;color:var(--muted);padding-bottom:4px;}
+.pts-box{min-width:84px;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="logo">CTQ Marcador</div>
-  <div class="live-dot"><div class="dot" id="liveDot"></div><span id="liveLabel">Esperando reloj…</span></div>
+  <div class="live-dot"><div class="dot" id="liveDot"></div><span id="liveLabel">Modo manual</span></div>
 </div>
 
 <!-- SETUP -->
@@ -143,16 +153,22 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
     </div>
   </div>
 
-  <button class="go-btn" onclick="startMatch()">▶ Iniciar y conectar reloj</button>
+  <div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Saca primero</div>
+    <div class="fmt-row"><button class="fmt-btn sel" id="fs0" onclick="selServe(0)">Jugador 1</button><button class="fmt-btn" id="fs1" onclick="selServe(1)">Jugador 2</button></div>
+  </div>
+
+  <button class="go-btn" onclick="startMatch()">▶ Iniciar partido</button>
 
   <div class="hint">
-    Después de iniciar, abre <strong>ctq-reloj.html</strong><br>en el navegador de tu reloj inteligente.
+    Cuenta los puntos tocando al jugador en el celular, con voz.<br>Si tienes reloj, ábrelo después: <strong>ctq-reloj.html</strong>.
   </div>
 </div>
 
 <!-- BOARD -->
 <div id="board">
   <div class="match-info" id="matchInfo"></div>
+  <div class="tap-hint">Toca al jugador que gana el punto</div>
 
   <div class="sb">
     <div class="sb-header">
@@ -160,16 +176,20 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
       <div class="sh-set" id="hS1">S1</div>
       <div class="sh-set" id="hS2">S2</div>
       <div class="sh-set" id="hS3" style="display:none">S3</div>
+      <div class="sh-set" id="hS4" style="display:none">S4</div>
+      <div class="sh-set" id="hS5" style="display:none">S5</div>
       <div class="sh-pts">JUEGO</div>
     </div>
 
-    <div class="sb-row serving" id="row0">
+    <div class="sb-row serving" id="row0" onclick="addPoint(0)">
       <div class="serve-pill"></div>
       <div class="p-name" id="bn0">P1</div>
       <div class="sets-area">
         <div class="set-num" id="bs0_0">-</div>
         <div class="set-num" id="bs0_1" style="display:none">-</div>
         <div class="set-num" id="bs0_2" style="display:none">-</div>
+        <div class="set-num" id="bs0_3" style="display:none">-</div>
+        <div class="set-num" id="bs0_4" style="display:none">-</div>
       </div>
       <div class="pts-box"><div class="pts" id="bpts0">0</div></div>
       <div class="win-banner">GANADOR</div>
@@ -177,13 +197,15 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 
     <div class="tie-label" id="tieLabel">⚡ TIEBREAK</div>
 
-    <div class="sb-row" id="row1">
+    <div class="sb-row" id="row1" onclick="addPoint(1)">
       <div class="serve-pill"></div>
       <div class="p-name" id="bn1">P2</div>
       <div class="sets-area">
         <div class="set-num" id="bs1_0">-</div>
         <div class="set-num" id="bs1_1" style="display:none">-</div>
         <div class="set-num" id="bs1_2" style="display:none">-</div>
+        <div class="set-num" id="bs1_3" style="display:none">-</div>
+        <div class="set-num" id="bs1_4" style="display:none">-</div>
       </div>
       <div class="pts-box"><div class="pts" id="bpts1">0</div></div>
       <div class="win-banner">GANADOR</div>
@@ -191,8 +213,9 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
   </div>
 
   <div class="bottom">
-    <button class="reset-btn" onclick="confirmReset()">↩ Nuevo partido</button>
+    <button class="reset-btn" onclick="confirmReset()">✕ Nuevo</button>
     <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="undo()" class="reset-btn" style="font-size:16px">↶</button><button onclick="toggleServe()" class="reset-btn">Saque</button><button id="mtbBtn" onclick="toggleMTB()" class="reset-btn" style="display:none;color:var(--yellow)">Ventaja</button>
       <button onclick="cantarPuntaje()" title="Cantar puntaje" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:18px;padding:6px 10px;cursor:pointer;" id="cantarBtn">📢</button>
       <button onclick="cantarMarcador()" title="Cantar marcador completo" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;padding:6px 10px;cursor:pointer;font-family:'Inter',sans-serif;">Sets</button>
       <button onclick="toggleVozCelular()" id="vozCelBtn" title="Voz auto" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--green);font-size:18px;padding:6px 10px;cursor:pointer;">🔊</button>
@@ -202,7 +225,8 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 
 <script>
 const PL = ['0','15','30','40','AD'];
-let fmtKey = '3mtb';
+let fmtKey = '3mtb', firstServe = 0;
+function selServe(i){firstServe=i;document.getElementById('fs0').classList.toggle('sel',i===0);document.getElementById('fs1').classList.toggle('sel',i===1);}
 let state = null;
 const ch = new BroadcastChannel('ctq_score');
 
@@ -259,7 +283,7 @@ const FMT_HINTS = {
 function selFmt(k){
   fmtKey = k;
   document.querySelectorAll('.fmt-btn').forEach(b=>{
-    b.classList.toggle('sel', b.getAttribute('onclick').includes("'"+k+"'"));
+    const o=b.getAttribute('onclick')||'';if(o.startsWith('selFmt('))b.classList.toggle('sel',o.includes("'"+k+"'"));
   });
   document.getElementById('fmtHint').textContent = FMT_HINTS[k];
 }
@@ -277,6 +301,8 @@ function freshState(){
     over:false,
     fmtKey:'3mtb',  // '1'|'3'|'3mtb'|'5'
     winner:-1,
+    tbFirst:0,
+    mtbSuddenDeath:false,
     // derived helpers (recalculated on load)
     maxSets:3,      // total sets possible
     matchTieBreak:true  // 3rd set is super TB to 10
@@ -291,6 +317,9 @@ function startMatch(){
   state.fmtKey = fmtKey;
   state.maxSets = fmtKey==='1' ? 1 : fmtKey==='5' ? 5 : 3;
   state.matchTieBreak = (fmtKey==='3mtb');
+  state.serving = state.tbFirst = firstServe; history = [];
+  hablarCel(`Partido iniciado. Saca ${state.names[firstServe]}.`);
+  wake();
   saveAndBroadcast();
   document.getElementById('setup').style.display='none';
   document.getElementById('board').style.display='flex';
@@ -300,7 +329,7 @@ function startMatch(){
 function confirmReset(){
   if(confirm('¿Iniciar nuevo partido?')){
     state=null;
-    localStorage.removeItem('ctq_state');
+    localStorage.removeItem('ctq_state');localStorage.removeItem('ctq_hist');history=[];if(window.speechSynthesis)speechSynthesis.cancel();
     ch.postMessage({type:'reset'});
     document.getElementById('board').style.display='none';
     document.getElementById('setup').style.display='flex';
@@ -311,11 +340,13 @@ function confirmReset(){
 function saveAndBroadcast(){
   const s = JSON.stringify(state);
   localStorage.setItem('ctq_state', s);
+  localStorage.setItem('ctq_hist', JSON.stringify(history));
   ch.postMessage({type:'state', state});
 }
 
 /* ── RECEIVE from watch page ── */
 ch.onmessage = e => {
+  if(e.data.type==='reset'){state=null;history=[];localStorage.removeItem('ctq_state');localStorage.removeItem('ctq_hist');document.getElementById('board').style.display='none';document.getElementById('setup').style.display='flex';return;}
   if(e.data.type==='state'){
     state = e.data.state;
     localStorage.setItem('ctq_state',JSON.stringify(state));
@@ -337,7 +368,7 @@ let liveTimer;
 function setLive(on){
   clearTimeout(liveTimer);
   document.getElementById('liveDot').classList.toggle('on',on);
-  document.getElementById('liveLabel').textContent = on ? 'Reloj conectado ✓' : 'Esperando reloj…';
+  document.getElementById('liveLabel').textContent = on ? 'Reloj conectado ✓' : 'Modo manual';
   if(on) liveTimer = setTimeout(()=>setLive(false), 5000);
 }
 
@@ -349,6 +380,7 @@ function renderBoard(){
   document.getElementById('bn0').textContent = names[0];
   document.getElementById('bn1').textContent = names[1];
   document.getElementById('matchInfo').textContent = FMT_LABELS[state.fmtKey]||'';
+  document.getElementById('hS3').textContent = state.matchTieBreak?'MTB':'S3';
 
   // Points
   if(tiebreak){
@@ -368,7 +400,7 @@ function renderBoard(){
 
   // Sets
   const totalSets = Math.ceil(ms/2)*2-1;
-  for(let si=0;si<3;si++){
+  for(let si=0;si<5;si++){
     const show = si < totalSets;
     ['hS'+(si+1)].forEach(id=>{
       const el=document.getElementById(id);
@@ -382,7 +414,7 @@ function renderBoard(){
         el.textContent=setsHistory[p][si];
         el.classList.toggle('won', setsHistory[p][si]>setsHistory[1-p][si]);
       } else if(si===setsHistory[0].length){
-        el.textContent=games[p];
+        el.textContent=(tiebreak&&state.matchTieBreak&&setsHistory[0].length===2)?'-':games[p];
         el.classList.add('won');
       } else {
         el.textContent='-';
@@ -394,6 +426,7 @@ function renderBoard(){
   // Serve
   document.getElementById('row0').className='sb-row'+(serving===0?' serving':'')+(winner===0?' winner':'');
   document.getElementById('row1').className='sb-row'+(serving===1?' serving':'')+(winner===1?' winner':'');
+  updMTB();
 }
 
 function setP(p,txt,cls){
@@ -402,60 +435,128 @@ function setP(p,txt,cls){
   el.className='pts '+(cls||'');
 }
 
-/* ── VOZ (celular) ── */
-let vozCelActiva = true;
+/* ── VOZ + MOTOR DE PUNTAJE (celular) ── */
+let vozCelActiva = true, voces = [], history = [], wl = null;
+const PS = ['cero','quince','treinta','cuarenta'];
 
-function hablarCel(texto, prioridad=false){
-  if(!vozCelActiva) return;
-  if(!window.speechSynthesis) return;
-  if(prioridad) window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(texto);
-  u.lang='es-CL'; u.rate=1.05; u.pitch=1.1; u.volume=1;
-  const voces = window.speechSynthesis.getVoices();
-  const pref = voces.find(v=>v.lang.startsWith('es')&&/female|mujer|Paulina|Monica|Mónica|Laura|Luciana/i.test(v.name))
-             || voces.find(v=>v.lang.startsWith('es'));
-  if(pref) u.voice=pref;
-  window.speechSynthesis.speak(u);
-}
-if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=()=>{};
-
-function cantarPuntaje(){
-  if(!state) return;
-  const {names,pts,games,setsHistory,tiebreak,tbPts,serving}=state;
-  const srv=serving, rx=1-serving;
-  let txt='';
-  if(tiebreak){
-    const isMTB=state.matchTieBreak&&setsHistory[0].length===2;
-    txt=`${isMTB?'Match Tie Break':'Tie Break'}: ${tbPts[srv]} – ${tbPts[rx]}`;
-  } else {
-    const p0=pts[srv],p1=pts[rx];
-    if(p0===3&&p1===3) txt='Iguales';
-    else if(p0===4&&p1===3) txt=`Ventaja ${names[srv]}`;
-    else if(p0===3&&p1===4) txt=`Ventaja ${names[rx]}`;
-    else{ const lbl=['cero','quince','treinta','cuarenta']; txt=`${lbl[p0]} – ${lbl[p1]}`; }
+function cargarVoces(){ if(window.speechSynthesis) voces = speechSynthesis.getVoices(); }
+if(window.speechSynthesis){ cargarVoces(); speechSynthesis.onvoiceschanged = cargarVoces; }
+function elegirVoz(){
+  for(const l of ['es-cl','es-mx','es-419','es-us','es-es','es']){
+    const v = voces.find(v=>v.lang.replace('_','-').toLowerCase().startsWith(l));
+    if(v) return v;
   }
-  hablarCel(txt,true);
+  return null;
+}
+function hablarCel(texto, prioridad=true){
+  if(!vozCelActiva || !window.speechSynthesis) return;
+  if(prioridad) speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang='es-CL'; u.rate=1; u.volume=1;
+  const v = elegirVoz(); if(v){ u.voice=v; u.lang=v.lang; }
+  speechSynthesis.speak(u);
+}
+async function wake(){ try{ wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;}); }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && state && !state.over) wake(); });
+
+function isMTB(){ return state.matchTieBreak && state.setsHistory[0].length===2; }
+function tbServer(){ const n=state.tbPts[0]+state.tbPts[1]; return Math.floor((n+1)/2)%2===0 ? state.tbFirst : 1-state.tbFirst; }
+function scoreText(){
+  const {names:n,pts,tbPts,serving:sv,tiebreak}=state, rx=1-sv;
+  if(tiebreak) return `${tbPts[sv]} – ${tbPts[rx]}`;
+  const x=pts[sv], y=pts[rx];
+  if(x===3&&y===3) return 'Iguales';
+  if(x===4&&y===3) return `Ventaja ${n[sv]}`;
+  if(x===3&&y===4) return `Ventaja ${n[rx]}`;
+  return `${PS[x]} – ${PS[y]}`;
+}
+function resumen(w){ return state.setsHistory[0].map((_,i)=>`${state.setsHistory[w][i]} a ${state.setsHistory[1-w][i]}`).join(', '); }
+
+function winGame(p, say){
+  const n=state.names, wasTB=state.tiebreak;
+  state.games[p]++; state.pts=[0,0];
+  const g=state.games, mg=g[p], og=g[1-p];
+  if((mg>=6&&mg-og>=2)||mg===7){
+    state.setsHistory[0].push(g[0]); state.setsHistory[1].push(g[1]);
+    state.games=[0,0]; state.tiebreak=false; state.tbPts=[0,0];
+    const sh=state.setsHistory;
+    const sw=[0,1].map(i=>sh[i].filter((x,k)=>x>sh[1-i][k]).length);
+    state.serving = wasTB ? 1-state.tbFirst : 1-state.serving;
+    if(sw[p]>=Math.ceil(state.maxSets/2)){
+      state.over=true; state.winner=p;
+      say.push(`Partido para ${n[p]}. ${resumen(p)}.`);
+      return;
+    }
+    say.push(`Set para ${n[p]}, ${g[p]} a ${g[1-p]}. Sets: ${n[0]} ${sw[0]}, ${n[1]} ${sw[1]}.`);
+    if(state.matchTieBreak && sh[0].length===2){
+      state.tiebreak=true; state.tbFirst=state.serving;
+      say.push('Match Tie Break, primero en llegar a diez.');
+    }
+    return;
+  }
+  say.push(`Juego ${n[p]}. ${n[0]} ${g[0]}, ${n[1]} ${g[1]}.`);
+  state.serving=1-state.serving;
+  if(g[0]===6&&g[1]===6){ state.tiebreak=true; state.tbPts=[0,0]; state.tbFirst=state.serving; say.push('Tie break.'); }
+  else if((g[0]+g[1])%2===1) say.push('Cambio de lado.');
 }
 
+function addPoint(p){
+  if(!state || state.over) return;
+  if(!wl) wake();
+  history.push(JSON.stringify(state)); if(history.length>80) history.shift();
+  const say=[]; let done=false;
+  if(state.tiebreak){
+    state.tbPts[p]++;
+    const mtb=isMTB(), target=mtb?10:7, adv=mtb?!state.mtbSuddenDeath:true;
+    const a=state.tbPts[p], b=state.tbPts[1-p];
+    if(a>=target && (!adv || a-b>=2)){
+      if(mtb){
+        state.setsHistory[0].push(state.tbPts[0]); state.setsHistory[1].push(state.tbPts[1]);
+        state.over=true; state.winner=p;
+        say.push(`Partido para ${state.names[p]}. ${resumen(p)}.`);
+      } else winGame(p,say);
+      done=true;
+    } else state.serving=tbServer();
+  } else {
+    const s=state.pts; s[p]++;
+    if(s[0]>=3&&s[1]>=3){
+      if(s[0]===s[1]){ s[0]=s[1]=3; }
+      else if(Math.abs(s[0]-s[1])>=2){ winGame(s[0]>s[1]?0:1,say); done=true; }
+    } else if(s[p]>=4){ winGame(p,say); done=true; }
+  }
+  if(!done){
+    say.push(scoreText()+'.');
+    if(state.tiebreak && (state.tbPts[0]+state.tbPts[1])%6===0) say.push('Cambio de lado.');
+  }
+  renderBoard(); saveAndBroadcast();
+  hablarCel(say.join(' '));
+}
+function undo(){
+  if(!history.length) return;
+  state=JSON.parse(history.pop());
+  renderBoard(); saveAndBroadcast();
+  hablarCel('Punto corregido. '+(state.over?'':scoreText()));
+}
+function toggleServe(){
+  if(!state||state.over) return;
+  state.serving=1-state.serving; if(state.tiebreak) state.tbFirst=1-state.tbFirst;
+  renderBoard(); saveAndBroadcast(); hablarCel(`Saca ${state.names[state.serving]}.`);
+}
+function toggleMTB(){ if(!state) return; state.mtbSuddenDeath=!state.mtbSuddenDeath; renderBoard(); saveAndBroadcast(); }
+function updMTB(){
+  const b=document.getElementById('mtbBtn'); if(!b||!state) return;
+  b.style.display=(state.tiebreak&&isMTB()&&!state.over)?'':'none';
+  b.textContent=state.mtbSuddenDeath?'Muere o muere':'Con ventaja';
+}
+
+function cantarPuntaje(){ if(state) hablarCel(state.over?'Partido terminado.':scoreText()); }
 function cantarMarcador(){
   if(!state) return;
-  const {names,games,setsHistory,tiebreak,tbPts}=state;
-  const sh=setsHistory; let partes=[];
-  for(let i=0;i<sh[0].length;i++){
-    const isMTBset=state.matchTieBreak&&i===2;
-    partes.push(isMTBset?`Match Tie Break ${sh[0][i]} a ${sh[1][i]}`:`Set ${i+1}: ${sh[0][i]} a ${sh[1][i]}`);
-  }
-  if(!state.over){
-    if(tiebreak){
-      const isMTB=state.matchTieBreak&&sh[0].length===2;
-      partes.push(`${isMTB?'Match Tie Break':'Tie Break'} en curso: ${tbPts[0]} a ${tbPts[1]}`);
-    } else {
-      partes.push(`Juegos: ${names[0]} ${games[0]}, ${names[1]} ${games[1]}`);
-    }
-  }
-  hablarCel(partes.length?partes.join('. ')+'.':'Partido sin puntos aún.',true);
+  const n=state.names, sh=state.setsHistory, t=[];
+  sh[0].forEach((a,i)=>t.push((state.matchTieBreak&&i===2?'Match Tie Break ':`Set ${i+1}: `)+`${a} a ${sh[1][i]}`));
+  if(!state.over) t.push(state.tiebreak ? `${isMTB()?'Match Tie Break':'Tie Break'} en curso: ${state.tbPts[0]} a ${state.tbPts[1]}` : `Juegos: ${n[0]} ${state.games[0]}, ${n[1]} ${state.games[1]}`);
+  hablarCel(t.join('. ')+'.');
 }
-
 function toggleVozCelular(){
   vozCelActiva=!vozCelActiva;
   const btn=document.getElementById('vozCelBtn');
@@ -466,6 +567,7 @@ function toggleVozCelular(){
 
 // Load saved state on open
 const saved = localStorage.getItem('ctq_state');
+try{history=JSON.parse(localStorage.getItem('ctq_hist')||'[]');}catch(e){}
 if(saved){
   try{
     state=JSON.parse(saved);
