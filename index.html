@@ -89,6 +89,9 @@ body{display:flex;flex-direction:column;height:100dvh;}
 .sb-row:active{transform:scale(.985);}
 .tap-hint{text-align:center;font-size:11px;color:var(--muted);padding-bottom:4px;}
 .pts-box{min-width:84px;}
+.win-banner{top:8px;right:16px;transform:none;font-size:12px;}
+.p-name{white-space:normal;overflow:visible;text-overflow:clip;font-size:20px;line-height:1.15;min-width:0;word-break:break-word;}
+.sets-area{gap:6px;}
 </style>
 </head>
 <body>
@@ -386,9 +389,9 @@ function renderBoard(){
   if(tiebreak){
     setP(0,tbPts[0]+'','');
     setP(1,tbPts[1]+'','');
-    const isMTB = state.matchTieBreak && setsHistory[0].length===2;
+    const isMTB = state.matchTieBreak && setsHistory[0].length>=2;
     let tlTxt = '⚡ TIEBREAK';
-    if(isMTB) tlTxt = state.mtbSuddenDeath ? '🔥 MATCH TIE BREAK · primero en 10 gana' : '🔥 MATCH TIE BREAK · a 10 (con ventaja)';
+    if(isMTB) tlTxt = state.over ? '🔥 MATCH TIE BREAK · final' : state.mtbSuddenDeath ? '🔥 MATCH TIE BREAK · primero en 10 gana' : '🔥 MATCH TIE BREAK · a 10 (con ventaja)';
     document.getElementById('tieLabel').textContent = tlTxt;
     document.getElementById('tieLabel').classList.add('show');
   } else {
