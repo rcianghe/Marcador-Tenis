@@ -6,16 +6,21 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#060d1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CTQ Marcador">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>CTQ · Marcador</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600;700&display=swap');
 :root{--bg:#060d1a;--mid:#0b1629;--border:#172640;--green:#00c46a;--yellow:#f5c518;--red:#e63946;--muted:#4a6080;--white:#eef3ff;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;overflow:hidden;}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;overflow:hidden;}
 
 /* ── STATUS BAR ── */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;border-bottom:1px solid var(--border);}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);}
+.logo{font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);}
 .live-dot{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
 .dot.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite;}
@@ -23,14 +28,14 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 
 /* ── SETUP ── */
 #setup{padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
-.setup-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;text-align:center;color:var(--green);}
+.setup-title{font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:30px;letter-spacing:2px;text-align:center;color:var(--green);}
 .field label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
-.field input{width:100%;background:var(--mid);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:18px;padding:12px 14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.field input{width:100%;background:var(--mid);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:18px;padding:12px 14px;font-family:'Inter',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;outline:none;transition:border-color .2s;}
 .field input:focus{border-color:var(--green);}
 .fmt-row{display:flex;gap:8px;}
-.fmt-btn{flex:1;padding:10px;background:var(--mid);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:14px;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;}
+.fmt-btn{flex:1;padding:10px;background:var(--mid);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:14px;font-family:'Inter',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;cursor:pointer;transition:all .2s;}
 .fmt-btn.sel{background:#00402a;border-color:var(--green);color:var(--white);font-weight:700;}
-.go-btn{background:var(--green);border:none;border-radius:12px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;padding:16px;width:100%;cursor:pointer;transition:all .15s;}
+.go-btn{background:var(--green);border:none;border-radius:12px;color:#fff;font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:24px;letter-spacing:2px;padding:16px;width:100%;cursor:pointer;transition:all .15s;}
 .go-btn:active{transform:scale(.97);background:#009950;}
 .hint{font-size:12px;color:var(--muted);text-align:center;line-height:1.5;}
 
@@ -51,11 +56,11 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 .p-name{font-size:22px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 .sets-area{display:flex;gap:10px;}
-.set-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--muted);width:22px;text-align:center;line-height:1;}
+.set-num{font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:28px;color:var(--muted);width:22px;text-align:center;line-height:1;}
 .set-num.won{color:var(--white);}
 
 .pts-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:2px 10px;min-width:72px;text-align:center;}
-.pts{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;color:var(--yellow);}
+.pts{font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:52px;line-height:1;color:var(--yellow);}
 .pts.adv{color:var(--green);}
 .pts.dis{color:var(--muted);}
 
@@ -71,12 +76,12 @@ html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter
 .tie-label.show{display:block;}
 
 /* winner banner */
-.win-banner{display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--green);}
+.win-banner{display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:'Bebas Neue',Impact,'Arial Narrow',sans-serif;font-size:14px;letter-spacing:2px;color:var(--green);}
 .winner .win-banner{display:block;}
 
 /* bottom */
 .bottom{border-top:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
-.reset-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:8px 14px;font-family:'Inter',sans-serif;cursor:pointer;}
+.reset-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:8px 14px;font-family:'Inter',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;cursor:pointer;}
 .reset-btn:active{color:var(--red);border-color:var(--red);}
 .waiting{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
 body{display:flex;flex-direction:column;height:100dvh;}
@@ -166,6 +171,7 @@ body{display:flex;flex-direction:column;height:100dvh;}
   <div class="hint">
     Cuenta los puntos tocando al jugador en el celular, con voz.<br>Si tienes reloj, ábrelo después: <strong>ctq-reloj.html</strong>.
   </div>
+  <div class="hint" id="instalaHint" style="display:none;color:var(--green)">📲 Para instalarla: Compartir → «Añadir a pantalla de inicio»</div>
 </div>
 
 <!-- BOARD -->
@@ -220,7 +226,7 @@ body{display:flex;flex-direction:column;height:100dvh;}
     <div style="display:flex;gap:8px;align-items:center;">
       <button onclick="undo()" class="reset-btn" style="font-size:16px">↶</button><button onclick="toggleServe()" class="reset-btn">Saque</button><button id="mtbBtn" onclick="toggleMTB()" class="reset-btn" style="display:none;color:var(--yellow)">Ventaja</button>
       <button onclick="cantarPuntaje()" title="Cantar puntaje" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:18px;padding:6px 10px;cursor:pointer;" id="cantarBtn">📢</button>
-      <button onclick="cantarMarcador()" title="Cantar marcador completo" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;padding:6px 10px;cursor:pointer;font-family:'Inter',sans-serif;">Sets</button>
+      <button onclick="cantarMarcador()" title="Cantar marcador completo" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;padding:6px 10px;cursor:pointer;font-family:'Inter',-apple-system,system-ui,'Segoe UI',Roboto,sans-serif;">Sets</button>
       <button onclick="toggleVozCelular()" id="vozCelBtn" title="Voz auto" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--green);font-size:18px;padding:6px 10px;cursor:pointer;">🔊</button>
     </div>
   </div>
@@ -533,6 +539,7 @@ function addPoint(p){
   }
   renderBoard(); saveAndBroadcast();
   hablarCel(say.join(' '));
+  if(navigator.vibrate) navigator.vibrate(done?[80,50,80]:30);
 }
 function undo(){
   if(!history.length) return;
@@ -581,6 +588,8 @@ if(saved){
     }
   }catch(e){}
 }
+if(!navigator.standalone && !matchMedia('(display-mode: standalone)').matches){ const h=document.getElementById('instalaHint'); if(h) h.style.display='block'; }
+if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
