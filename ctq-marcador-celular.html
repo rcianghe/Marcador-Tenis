@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060d1a">
+<title>CTQ · Marcador</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;600;700&display=swap');
+:root{--bg:#060d1a;--mid:#0b1629;--border:#172640;--green:#00c46a;--yellow:#f5c518;--red:#e63946;--muted:#4a6080;--white:#eef3ff;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;overflow:hidden;}
+
+/* ── STATUS BAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px;border-bottom:1px solid var(--border);}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--green);}
+.live-dot{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ── SETUP ── */
+#setup{padding:24px 20px;display:flex;flex-direction:column;gap:16px;}
+.setup-title{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;text-align:center;color:var(--green);}
+.field label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
+.field input{width:100%;background:var(--mid);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:18px;padding:12px 14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:var(--green);}
+.fmt-row{display:flex;gap:8px;}
+.fmt-btn{flex:1;padding:10px;background:var(--mid);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:14px;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;}
+.fmt-btn.sel{background:#00402a;border-color:var(--green);color:var(--white);font-weight:700;}
+.go-btn{background:var(--green);border:none;border-radius:12px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;padding:16px;width:100%;cursor:pointer;transition:all .15s;}
+.go-btn:active{transform:scale(.97);background:#009950;}
+.hint{font-size:12px;color:var(--muted);text-align:center;line-height:1.5;}
+
+/* ── SCOREBOARD ── */
+#board{display:none;height:calc(100vh - 53px);flex-direction:column;}
+
+.match-info{text-align:center;padding:6px;font-size:11px;color:var(--muted);letter-spacing:1px;}
+
+.sb{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 16px;gap:6px;}
+
+.sb-row{display:flex;align-items:center;padding:18px 20px;border-radius:16px;background:var(--mid);border:1px solid var(--border);gap:12px;transition:all .3s;position:relative;}
+.sb-row.serving{border-color:var(--yellow);background:#141e08;}
+.sb-row.winner{border-color:var(--green);background:#08251a;}
+
+.serve-pill{width:8px;height:8px;border-radius:50%;background:var(--yellow);flex-shrink:0;opacity:0;}
+.serving .serve-pill{opacity:1;}
+
+.p-name{font-size:22px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.sets-area{display:flex;gap:10px;}
+.set-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--muted);width:22px;text-align:center;line-height:1;}
+.set-num.won{color:var(--white);}
+
+.pts-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:2px 10px;min-width:72px;text-align:center;}
+.pts{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;color:var(--yellow);}
+.pts.adv{color:var(--green);}
+.pts.dis{color:var(--muted);}
+
+.divider{height:1px;background:var(--border);margin:0 16px;}
+
+/* set header */
+.sb-header{display:flex;align-items:center;padding:4px 20px;gap:12px;}
+.sh-name{flex:1;}
+.sh-set{width:22px;text-align:center;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.sh-pts{min-width:72px;text-align:center;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+.tie-label{text-align:center;font-size:12px;color:var(--yellow);letter-spacing:2px;padding:4px 0;display:none;}
+.tie-label.show{display:block;}
+
+/* winner banner */
+.win-banner{display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--green);}
+.winner .win-banner{display:block;}
+
+/* bottom */
+.bottom{border-top:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;}
+.reset-btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:8px 14px;font-family:'Inter',sans-serif;cursor:pointer;}
+.reset-btn:active{color:var(--red);border-color:var(--red);}
+.waiting{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">CTQ Marcador</div>
+  <div class="live-dot"><div class="dot" id="liveDot"></div><span id="liveLabel">Esperando reloj…</span></div>
+</div>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="setup-title">Nuevo Partido</div>
+
+  <!-- Jugador 1 -->
+  <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Jugador 1 · Tú</div>
+    <div style="display:flex;gap:8px;">
+      <div class="field" style="flex:1;margin:0;"><label>Nombre</label><input id="p1n" placeholder="Ricardo" maxlength="15"></div>
+      <div class="field" style="flex:1;margin:0;"><label>Apellido</label><input id="p1a" placeholder="Ciangherotti" maxlength="15"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">Mostrar como</div>
+      <div style="display:flex;gap:6px;">
+        <button class="fmt-btn sel" id="p1d_nombre"   style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(1,'nombre')">Nombre</button>
+        <button class="fmt-btn"    id="p1d_apellido"  style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(1,'apellido')">Apellido</button>
+        <button class="fmt-btn"    id="p1d_completo"  style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(1,'completo')">N. y Ap.</button>
+        <button class="fmt-btn"    id="p1d_iniciales" style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(1,'iniciales')">R. C.</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--green);text-align:center;min-height:16px;" id="p1preview"></div>
+  </div>
+
+  <!-- Jugador 2 -->
+  <div style="background:var(--mid);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;">
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Jugador 2 · Rival</div>
+    <div style="display:flex;gap:8px;">
+      <div class="field" style="flex:1;margin:0;"><label>Nombre</label><input id="p2n" placeholder="Nombre" maxlength="15"></div>
+      <div class="field" style="flex:1;margin:0;"><label>Apellido</label><input id="p2a" placeholder="Apellido" maxlength="15"></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">Mostrar como</div>
+      <div style="display:flex;gap:6px;">
+        <button class="fmt-btn sel" id="p2d_nombre"   style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(2,'nombre')">Nombre</button>
+        <button class="fmt-btn"    id="p2d_apellido"  style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(2,'apellido')">Apellido</button>
+        <button class="fmt-btn"    id="p2d_completo"  style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(2,'completo')">N. y Ap.</button>
+        <button class="fmt-btn"    id="p2d_iniciales" style="flex:1;font-size:12px;padding:7px 4px;" onclick="selDisplay(2,'iniciales')">R. C.</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--green);text-align:center;min-height:16px;" id="p2preview"></div>
+  </div>
+
+  <div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Formato</div>
+    <div class="fmt-row" style="flex-wrap:wrap;">
+      <button class="fmt-btn" style="flex-basis:calc(50% - 4px)" onclick="selFmt('1')">1 Set</button>
+      <button class="fmt-btn" style="flex-basis:calc(50% - 4px)" onclick="selFmt('3')">Best of 3</button>
+      <button class="fmt-btn sel" style="flex-basis:100%;font-size:12px;" onclick="selFmt('3mtb')">Bo3 + Match Tie Break</button>
+      <button class="fmt-btn" style="flex-basis:100%" onclick="selFmt('5')">Best of 5</button>
+    </div>
+    <div id="fmtHint" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">
+      Si van 1-1 en sets → Super Tie Break a 10 puntos
+    </div>
+  </div>
+
+  <button class="go-btn" onclick="startMatch()">▶ Iniciar y conectar reloj</button>
+
+  <div class="hint">
+    Después de iniciar, abre <strong>ctq-reloj.html</strong><br>en el navegador de tu reloj inteligente.
+  </div>
+</div>
+
+<!-- BOARD -->
+<div id="board">
+  <div class="match-info" id="matchInfo"></div>
+
+  <div class="sb">
+    <div class="sb-header">
+      <div class="sh-name"></div>
+      <div class="sh-set" id="hS1">S1</div>
+      <div class="sh-set" id="hS2">S2</div>
+      <div class="sh-set" id="hS3" style="display:none">S3</div>
+      <div class="sh-pts">JUEGO</div>
+    </div>
+
+    <div class="sb-row serving" id="row0">
+      <div class="serve-pill"></div>
+      <div class="p-name" id="bn0">P1</div>
+      <div class="sets-area">
+        <div class="set-num" id="bs0_0">-</div>
+        <div class="set-num" id="bs0_1" style="display:none">-</div>
+        <div class="set-num" id="bs0_2" style="display:none">-</div>
+      </div>
+      <div class="pts-box"><div class="pts" id="bpts0">0</div></div>
+      <div class="win-banner">GANADOR</div>
+    </div>
+
+    <div class="tie-label" id="tieLabel">⚡ TIEBREAK</div>
+
+    <div class="sb-row" id="row1">
+      <div class="serve-pill"></div>
+      <div class="p-name" id="bn1">P2</div>
+      <div class="sets-area">
+        <div class="set-num" id="bs1_0">-</div>
+        <div class="set-num" id="bs1_1" style="display:none">-</div>
+        <div class="set-num" id="bs1_2" style="display:none">-</div>
+      </div>
+      <div class="pts-box"><div class="pts" id="bpts1">0</div></div>
+      <div class="win-banner">GANADOR</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <button class="reset-btn" onclick="confirmReset()">↩ Nuevo partido</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="cantarPuntaje()" title="Cantar puntaje" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--white);font-size:18px;padding:6px 10px;cursor:pointer;" id="cantarBtn">📢</button>
+      <button onclick="cantarMarcador()" title="Cantar marcador completo" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:11px;padding:6px 10px;cursor:pointer;font-family:'Inter',sans-serif;">Sets</button>
+      <button onclick="toggleVozCelular()" id="vozCelBtn" title="Voz auto" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--green);font-size:18px;padding:6px 10px;cursor:pointer;">🔊</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PL = ['0','15','30','40','AD'];
+let fmtKey = '3mtb';
+let state = null;
+const ch = new BroadcastChannel('ctq_score');
+
+// Modo de display por jugador: 'nombre'|'apellido'|'completo'|'iniciales'
+let displayMode = ['nombre','nombre'];
+
+function selDisplay(player, mode){
+  displayMode[player-1] = mode;
+  const pfx = 'p'+player+'d_';
+  ['nombre','apellido','completo','iniciales'].forEach(m=>{
+    document.getElementById(pfx+m).classList.toggle('sel', m===mode);
+  });
+  updatePreview(player);
+}
+
+function buildLabel(player){
+  const n = (document.getElementById('p'+player+'n').value.trim());
+  const a = (document.getElementById('p'+player+'a').value.trim());
+  const mode = displayMode[player-1];
+  if(mode==='nombre')    return n || 'Jugador '+player;
+  if(mode==='apellido')  return a || n || 'Jugador '+player;
+  if(mode==='completo')  return [n,a].filter(Boolean).join(' ') || 'Jugador '+player;
+  if(mode==='iniciales'){
+    const ini = [n,a].filter(Boolean).map(x=>x[0].toUpperCase()+'.').join(' ');
+    return ini || 'Jugador '+player;
+  }
+  return 'Jugador '+player;
+}
+
+function updatePreview(player){
+  const lbl = buildLabel(player);
+  document.getElementById('p'+player+'preview').textContent = '→ Se verá como: "' + lbl + '"';
+}
+
+// Actualizar preview al escribir (diferido para que el DOM esté listo)
+window.addEventListener('DOMContentLoaded',()=>{
+  ['p1n','p1a'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>updatePreview(1)); });
+  ['p2n','p2a'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>updatePreview(2)); });
+});
+
+const FMT_LABELS = {
+  '1':'1 Set',
+  '3':'Best of 3',
+  '3mtb':'Bo3 + Match Tie Break',
+  '5':'Best of 5'
+};
+const FMT_HINTS = {
+  '1':'Un set normal',
+  '3':'Al mejor de 3 sets (tiebreak a 7 en cada set)',
+  '3mtb':'Si van 1-1 en sets → Super Tie Break a 10 puntos',
+  '5':'Al mejor de 5 sets'
+};
+
+function selFmt(k){
+  fmtKey = k;
+  document.querySelectorAll('.fmt-btn').forEach(b=>{
+    b.classList.toggle('sel', b.getAttribute('onclick').includes("'"+k+"'"));
+  });
+  document.getElementById('fmtHint').textContent = FMT_HINTS[k];
+}
+
+function freshState(){
+  return {
+    names:['',''],
+    pts:[0,0],
+    games:[0,0],
+    setsHistory:[[],[]],
+    currentSet:0,
+    tiebreak:false,
+    tbPts:[0,0],
+    serving:0,
+    over:false,
+    fmtKey:'3mtb',  // '1'|'3'|'3mtb'|'5'
+    winner:-1,
+    // derived helpers (recalculated on load)
+    maxSets:3,      // total sets possible
+    matchTieBreak:true  // 3rd set is super TB to 10
+  };
+}
+
+function startMatch(){
+  const n1 = buildLabel(1);
+  const n2 = buildLabel(2);
+  state = freshState();
+  state.names = [n1,n2];
+  state.fmtKey = fmtKey;
+  state.maxSets = fmtKey==='1' ? 1 : fmtKey==='5' ? 5 : 3;
+  state.matchTieBreak = (fmtKey==='3mtb');
+  saveAndBroadcast();
+  document.getElementById('setup').style.display='none';
+  document.getElementById('board').style.display='flex';
+  renderBoard();
+}
+
+function confirmReset(){
+  if(confirm('¿Iniciar nuevo partido?')){
+    state=null;
+    localStorage.removeItem('ctq_state');
+    ch.postMessage({type:'reset'});
+    document.getElementById('board').style.display='none';
+    document.getElementById('setup').style.display='flex';
+  }
+}
+
+/* ── SAVE / BROADCAST ── */
+function saveAndBroadcast(){
+  const s = JSON.stringify(state);
+  localStorage.setItem('ctq_state', s);
+  ch.postMessage({type:'state', state});
+}
+
+/* ── RECEIVE from watch page ── */
+ch.onmessage = e => {
+  if(e.data.type==='state'){
+    state = e.data.state;
+    localStorage.setItem('ctq_state',JSON.stringify(state));
+    if(state && state.names){
+      document.getElementById('setup').style.display='none';
+      document.getElementById('board').style.display='flex';
+    }
+    setLive(true);
+    renderBoard();
+  }
+  if(e.data.type==='ping'){
+    setLive(true);
+    ch.postMessage({type:'pong', state});
+  }
+};
+
+/* ── LIVE INDICATOR ── */
+let liveTimer;
+function setLive(on){
+  clearTimeout(liveTimer);
+  document.getElementById('liveDot').classList.toggle('on',on);
+  document.getElementById('liveLabel').textContent = on ? 'Reloj conectado ✓' : 'Esperando reloj…';
+  if(on) liveTimer = setTimeout(()=>setLive(false), 5000);
+}
+
+/* ── RENDER ── */
+function renderBoard(){
+  if(!state) return;
+  const {names,pts,games,setsHistory,tiebreak,tbPts,serving,over,maxSets:ms,winner} = state;
+
+  document.getElementById('bn0').textContent = names[0];
+  document.getElementById('bn1').textContent = names[1];
+  document.getElementById('matchInfo').textContent = FMT_LABELS[state.fmtKey]||'';
+
+  // Points
+  if(tiebreak){
+    setP(0,tbPts[0]+'','');
+    setP(1,tbPts[1]+'','');
+    const isMTB = state.matchTieBreak && setsHistory[0].length===2;
+    let tlTxt = '⚡ TIEBREAK';
+    if(isMTB) tlTxt = state.mtbSuddenDeath ? '🔥 MATCH TIE BREAK · primero en 10 gana' : '🔥 MATCH TIE BREAK · a 10 (con ventaja)';
+    document.getElementById('tieLabel').textContent = tlTxt;
+    document.getElementById('tieLabel').classList.add('show');
+  } else {
+    const adv = pts[0]>=3&&pts[1]>=3 ? (pts[0]>pts[1]?0:pts[1]>pts[0]?1:-1) : -1;
+    setP(0, PL[pts[0]], adv===0?'adv':pts[0]<3?'':'dis');
+    setP(1, PL[pts[1]], adv===1?'adv':pts[1]<3?'':'dis');
+    document.getElementById('tieLabel').classList.remove('show');
+  }
+
+  // Sets
+  const totalSets = Math.ceil(ms/2)*2-1;
+  for(let si=0;si<3;si++){
+    const show = si < totalSets;
+    ['hS'+(si+1)].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display=show?'':'none';
+    });
+    for(let p=0;p<2;p++){
+      const el=document.getElementById(`bs${p}_${si}`);
+      if(!el) continue;
+      el.style.display=show?'':'none';
+      if(si < setsHistory[0].length){
+        el.textContent=setsHistory[p][si];
+        el.classList.toggle('won', setsHistory[p][si]>setsHistory[1-p][si]);
+      } else if(si===setsHistory[0].length){
+        el.textContent=games[p];
+        el.classList.add('won');
+      } else {
+        el.textContent='-';
+        el.classList.remove('won');
+      }
+    }
+  }
+
+  // Serve
+  document.getElementById('row0').className='sb-row'+(serving===0?' serving':'')+(winner===0?' winner':'');
+  document.getElementById('row1').className='sb-row'+(serving===1?' serving':'')+(winner===1?' winner':'');
+}
+
+function setP(p,txt,cls){
+  const el=document.getElementById('bpts'+p);
+  el.textContent=txt;
+  el.className='pts '+(cls||'');
+}
+
+/* ── VOZ (celular) ── */
+let vozCelActiva = true;
+
+function hablarCel(texto, prioridad=false){
+  if(!vozCelActiva) return;
+  if(!window.speechSynthesis) return;
+  if(prioridad) window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang='es-CL'; u.rate=1.05; u.pitch=1.1; u.volume=1;
+  const voces = window.speechSynthesis.getVoices();
+  const pref = voces.find(v=>v.lang.startsWith('es')&&/female|mujer|Paulina|Monica|Mónica|Laura|Luciana/i.test(v.name))
+             || voces.find(v=>v.lang.startsWith('es'));
+  if(pref) u.voice=pref;
+  window.speechSynthesis.speak(u);
+}
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged=()=>{};
+
+function cantarPuntaje(){
+  if(!state) return;
+  const {names,pts,games,setsHistory,tiebreak,tbPts,serving}=state;
+  const srv=serving, rx=1-serving;
+  let txt='';
+  if(tiebreak){
+    const isMTB=state.matchTieBreak&&setsHistory[0].length===2;
+    txt=`${isMTB?'Match Tie Break':'Tie Break'}: ${tbPts[srv]} – ${tbPts[rx]}`;
+  } else {
+    const p0=pts[srv],p1=pts[rx];
+    if(p0===3&&p1===3) txt='Iguales';
+    else if(p0===4&&p1===3) txt=`Ventaja ${names[srv]}`;
+    else if(p0===3&&p1===4) txt=`Ventaja ${names[rx]}`;
+    else{ const lbl=['cero','quince','treinta','cuarenta']; txt=`${lbl[p0]} – ${lbl[p1]}`; }
+  }
+  hablarCel(txt,true);
+}
+
+function cantarMarcador(){
+  if(!state) return;
+  const {names,games,setsHistory,tiebreak,tbPts}=state;
+  const sh=setsHistory; let partes=[];
+  for(let i=0;i<sh[0].length;i++){
+    const isMTBset=state.matchTieBreak&&i===2;
+    partes.push(isMTBset?`Match Tie Break ${sh[0][i]} a ${sh[1][i]}`:`Set ${i+1}: ${sh[0][i]} a ${sh[1][i]}`);
+  }
+  if(!state.over){
+    if(tiebreak){
+      const isMTB=state.matchTieBreak&&sh[0].length===2;
+      partes.push(`${isMTB?'Match Tie Break':'Tie Break'} en curso: ${tbPts[0]} a ${tbPts[1]}`);
+    } else {
+      partes.push(`Juegos: ${names[0]} ${games[0]}, ${names[1]} ${games[1]}`);
+    }
+  }
+  hablarCel(partes.length?partes.join('. ')+'.':'Partido sin puntos aún.',true);
+}
+
+function toggleVozCelular(){
+  vozCelActiva=!vozCelActiva;
+  const btn=document.getElementById('vozCelBtn');
+  btn.textContent=vozCelActiva?'🔊':'🔇';
+  btn.style.color=vozCelActiva?'var(--green)':'var(--muted)';
+  if(vozCelActiva) hablarCel('Voz activada');
+}
+
+// Load saved state on open
+const saved = localStorage.getItem('ctq_state');
+if(saved){
+  try{
+    state=JSON.parse(saved);
+    if(state&&state.names){
+      document.getElementById('setup').style.display='none';
+      document.getElementById('board').style.display='flex';
+      renderBoard();
+    }
+  }catch(e){}
+}
+</script>
+</body>
+</html>
