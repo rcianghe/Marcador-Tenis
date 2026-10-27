@@ -177,6 +177,14 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
 .pts{font-size:58px}
 .set-num{font-size:42px;min-width:22px}
 .sets-area{padding-right:10px}
+.modo{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.5px;color:#5d7aa3;cursor:pointer;-webkit-user-select:none;user-select:none}
+.modo span.on{color:#fff}
+.modo .track{width:36px;height:20px;border-radius:10px;background:#14335c;border:1px solid #2e7fd0;position:relative}
+.modo .track i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#59b4ff;transition:left .2s,background .2s}
+.modo.esc .track{border-color:#19ff7a;background:#0a3a24}
+.modo.esc .track i{left:18px;background:#19ff7a;box-shadow:0 0 8px #19ff7a}
+#toast{position:fixed;top:calc(env(safe-area-inset-top) + 72px);left:50%;transform:translateX(-50%);background:#061226;border:1.5px solid #19ff7a;color:#fff;font-weight:700;padding:8px 18px;border-radius:20px;box-shadow:0 0 18px rgba(25,255,122,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+#toast.show{opacity:1}
 </style>
 </head>
 <body>
@@ -199,7 +207,8 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
   <svg class="logo-ball" viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="none" stroke="#19ff7a" stroke-width="3"/><path d="M9 14c9 3 9 17 0 20M39 14c-9 3-9 17 0 20" fill="none" stroke="#19ff7a" stroke-width="3"/></svg>
   <div class="logo"><b>CTQ</b><span>MARCADOR</span></div>
   <div class="top-r"><button class="gear" onclick="cfgOpen(true)"><svg class="ic"><use href="#i-gear"/></svg></button>
-  <div class="live-dot"><div class="dot" id="liveDot"></div><span id="liveLabel">Modo manual</span></div></div>
+  <div class="modo" id="modoSw" role="switch" aria-checked="false" aria-label="Modo de partido" onclick="toggleModo()"><span id="mEsc">Escalerilla</span><div class="track"><i></i></div><span id="mAmi">Amistoso</span></div>
+  <div class="live-dot" style="display:none"><div class="dot" id="liveDot"></div><span id="liveLabel">Modo manual</span></div></div>
 </div>
 
 <!-- SETUP -->
@@ -336,6 +345,7 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
   </div>
   <div class="deco"><svg class="ball"><use href="#i-bigball"/></svg></div>
 </div>
+<div id="toast"></div>
 <div id="cfg" class="modal" onclick="if(event.target===this)cfgOpen(false)"><div class="sheet">
   <div class="sheet-t">Configuración</div>
   <button class="opt" onclick="toggleVozCelular()"><span>Voz del marcador</span><b id="vozCelBtn">🔊</b></button>
@@ -658,6 +668,10 @@ function addPoint(p){
   hablarCel(say.join(' '));
   if(navigator.vibrate) navigator.vibrate(done?[80,50,80]:30);
 }
+let modo=(function(){try{return localStorage.getItem('ctq_modo')==='escalerilla'?'escalerilla':'amistoso';}catch(e){return 'amistoso';}})();
+function pintarModo(){const e=modo==='escalerilla',sw=document.getElementById('modoSw');sw.classList.toggle('esc',e);sw.setAttribute('aria-checked',e);document.getElementById('mEsc').classList.toggle('on',e);document.getElementById('mAmi').classList.toggle('on',!e);}
+function toggleModo(){modo=modo==='escalerilla'?'amistoso':'escalerilla';try{localStorage.setItem('ctq_modo',modo);}catch(e){}pintarModo();const t=document.getElementById('toast');t.textContent='Modo '+(modo==='escalerilla'?'Escalerilla':'Amistoso');t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1500);}
+pintarModo();
 function cfgOpen(v){document.getElementById('cfg').classList.toggle('show',v);}
 function undo(){
   if(!history.length) return;
