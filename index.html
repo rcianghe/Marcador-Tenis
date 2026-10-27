@@ -166,6 +166,11 @@ body{display:flex;flex-direction:column;height:100dvh;}
     <div class="fmt-row"><button class="fmt-btn sel" id="fs0" onclick="selServe(0)">Jugador 1</button><button class="fmt-btn" id="fs1" onclick="selServe(1)">Jugador 2</button></div>
   </div>
 
+  <div>
+    <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tie break</div>
+    <div class="fmt-row"><button class="fmt-btn sel" id="tb0" onclick="selTB(0)">Diferencia de 2</button><button class="fmt-btn" id="tb1" onclick="selTB(1)">Muere o muere</button></div>
+  </div>
+
   <button class="go-btn" onclick="startMatch()">▶ Iniciar partido</button>
 
   <div class="hint">
@@ -234,7 +239,8 @@ body{display:flex;flex-direction:column;height:100dvh;}
 
 <script>
 const PL = ['0','15','30','40','AD'];
-let fmtKey = '3mtb', firstServe = 0;
+let fmtKey = '3mtb', firstServe = 0, tbSD = false;
+function selTB(i){tbSD=(i===1);document.getElementById('tb0').classList.toggle('sel',i===0);document.getElementById('tb1').classList.toggle('sel',i===1);}
 function selServe(i){firstServe=i;document.getElementById('fs0').classList.toggle('sel',i===0);document.getElementById('fs1').classList.toggle('sel',i===1);}
 let state = null;
 const ch = new BroadcastChannel('ctq_score');
@@ -326,7 +332,7 @@ function startMatch(){
   state.fmtKey = fmtKey;
   state.maxSets = fmtKey==='1' ? 1 : fmtKey==='5' ? 5 : 3;
   state.matchTieBreak = (fmtKey==='3mtb');
-  state.serving = state.tbFirst = firstServe; history = [];
+  state.serving = state.tbFirst = firstServe; state.mtbSuddenDeath = tbSD; history = [];
   hablarCel(`Partido iniciado. Saca ${state.names[firstServe]}.`);
   wake();
   saveAndBroadcast();
@@ -396,7 +402,7 @@ function renderBoard(){
     setP(0,tbPts[0]+'','');
     setP(1,tbPts[1]+'','');
     const isMTB = state.matchTieBreak && setsHistory[0].length>=2;
-    let tlTxt = '⚡ TIEBREAK';
+    let tlTxt = state.mtbSuddenDeath ? '⚡ TIEBREAK · muere o muere' : '⚡ TIEBREAK';
     if(isMTB) tlTxt = state.over ? '🔥 MATCH TIE BREAK · final' : state.mtbSuddenDeath ? '🔥 MATCH TIE BREAK · primero en 10 gana' : '🔥 MATCH TIE BREAK · a 10 (con ventaja)';
     document.getElementById('tieLabel').textContent = tlTxt;
     document.getElementById('tieLabel').classList.add('show');
@@ -505,7 +511,7 @@ function winGame(p, say){
   }
   say.push(`Juego ${n[p]}. ${n[0]} ${g[0]}, ${n[1]} ${g[1]}.`);
   state.serving=1-state.serving;
-  if(g[0]===6&&g[1]===6){ state.tiebreak=true; state.tbPts=[0,0]; state.tbFirst=state.serving; say.push('Tie break.'); }
+  if(g[0]===6&&g[1]===6){ state.tiebreak=true; state.tbPts=[0,0]; state.tbFirst=state.serving; say.push(state.mtbSuddenDeath?'Tie break, muere o muere.':'Tie break.'); }
   else if((g[0]+g[1])%2===1) say.push('Cambio de lado.');
 }
 
@@ -516,7 +522,7 @@ function addPoint(p){
   const say=[]; let done=false;
   if(state.tiebreak){
     state.tbPts[p]++;
-    const mtb=isMTB(), target=mtb?10:7, adv=mtb?!state.mtbSuddenDeath:true;
+    const mtb=isMTB(), target=mtb?10:7, adv=!state.mtbSuddenDeath;
     const a=state.tbPts[p], b=state.tbPts[1-p];
     if(a>=target && (!adv || a-b>=2)){
       if(mtb){
@@ -535,6 +541,7 @@ function addPoint(p){
   }
   if(!done){
     say.push(scoreText()+'.');
+    if(state.tiebreak&&state.mtbSuddenDeath&&state.tbPts[0]===state.tbPts[1]&&state.tbPts[0]===(isMTB()?9:6)) say.push('Punto decisivo.');
     if(state.tiebreak && (state.tbPts[0]+state.tbPts[1])%6===0) say.push('Cambio de lado.');
   }
   renderBoard(); saveAndBroadcast();
@@ -555,8 +562,8 @@ function toggleServe(){
 function toggleMTB(){ if(!state) return; state.mtbSuddenDeath=!state.mtbSuddenDeath; renderBoard(); saveAndBroadcast(); }
 function updMTB(){
   const b=document.getElementById('mtbBtn'); if(!b||!state) return;
-  b.style.display=(state.tiebreak&&isMTB()&&!state.over)?'':'none';
-  b.textContent=state.mtbSuddenDeath?'Muere o muere':'Con ventaja';
+  b.style.display=(state.tiebreak&&!state.over)?'':'none';
+  b.textContent=state.mtbSuddenDeath?'Muere o muere':'Dif. de 2';
 }
 
 function cantarPuntaje(){ if(state) hablarCel(state.over?'Partido terminado.':scoreText()); }
