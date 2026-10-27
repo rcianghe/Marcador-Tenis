@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#060d1a">
+<title>CTQ · Reloj</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;700&display=swap');
+:root{--bg:#060d1a;--mid:#0b1629;--border:#1a2f50;--green:#00c46a;--yellow:#f5c518;--red:#e04040;--muted:#4a6080;--white:#eef3ff;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;overflow:hidden;touch-action:manipulation;}
+
+/* ── WAITING ── */
+#waiting{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;}
+.w-icon{font-size:48px;}
+.w-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;color:var(--green);}
+.w-sub{font-size:13px;color:var(--muted);line-height:1.6;}
+.spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── MAIN ── */
+#main{display:none;height:100%;flex-direction:column;}
+
+/* mini score at top */
+.mini-score{background:var(--mid);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;flex-direction:column;gap:3px;}
+.ms-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.ms-name{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ms-pts{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--yellow);min-width:32px;text-align:right;}
+.ms-sets{font-size:12px;color:var(--muted);margin-right:8px;}
+.ms-row.sv .ms-name::before{content:'● ';color:var(--yellow);font-size:8px;vertical-align:middle;margin-right:4px;}
+.tie-mini{text-align:center;font-size:10px;color:var(--yellow);letter-spacing:1px;padding:2px 0;display:none;}
+.tie-mini.show{display:block;}
+
+/* ── BUTTONS ── */
+.btns{flex:1;display:flex;flex-direction:column;gap:0;}
+
+.point-btn{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  cursor:pointer;
+  border:none;
+  outline:none;
+  position:relative;
+  overflow:hidden;
+  -webkit-user-select:none;user-select:none;
+}
+.point-btn:first-child{border-bottom:2px solid var(--bg);}
+
+.btn-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4);}
+.btn-name{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px;line-height:1;}
+.btn-icon{font-size:20px;opacity:.25;}
+
+/* ripple */
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.25);transform:scale(0);animation:rip .5s linear;}
+@keyframes rip{to{transform:scale(4);opacity:0;}}
+
+/* undo / serve row */
+.action-row{display:flex;border-top:1px solid var(--border);}
+.act-btn{flex:1;padding:12px 8px;background:none;border:none;color:var(--muted);font-size:11px;font-family:'Inter',sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s;}
+.act-btn:active{color:var(--white);}
+.act-btn svg{width:18px;height:18px;}
+.act-btn.danger:active{color:var(--red);}
+
+/* winner overlay */
+#win{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px;z-index:50;}
+#win.show{display:flex;}
+.win-trophy{font-size:56px;}
+.win-name{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;color:var(--green);}
+.win-score{font-size:15px;color:var(--muted);}
+.win-btn{margin-top:8px;background:var(--green);border:none;border-radius:12px;color:#fff;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;padding:14px 32px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<!-- WAITING -->
+<div id="waiting">
+  <div class="w-icon">⌚</div>
+  <div class="w-title">CTQ Reloj</div>
+  <div class="w-sub">Primero inicia el partido en el celular (ctq-marcador-celular.html), luego este panel se conectará solo.</div>
+  <div class="spin"></div>
+  <div style="font-size:11px;color:var(--muted);">Buscando partido activo…</div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- mini scoreboard -->
+  <div class="mini-score">
+    <div class="ms-row" id="mrow0">
+      <div class="ms-name" id="mn0">P1</div>
+      <div class="ms-sets" id="msets0"></div>
+      <div class="ms-pts" id="mpts0">0</div>
+    </div>
+    <div class="tie-mini" id="tieMini">TIEBREAK</div>
+    <div id="mtbToggleRow" style="display:none;justify-content:center;gap:6px;padding:3px 0;">
+      <button id="btnAdv"  onclick="setMTBMode(false)" style="flex:1;padding:5px 4px;background:#0b1629;border:1px solid #1a2f50;border-radius:6px;color:#4a6080;font-size:10px;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;">Con ventaja</button>
+      <button id="btnSD"   onclick="setMTBMode(true)"  style="flex:1;padding:5px 4px;background:#0b1629;border:1px solid #1a2f50;border-radius:6px;color:#4a6080;font-size:10px;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;">Muere o muere</button>
+    </div>
+    <div class="ms-row" id="mrow1">
+      <div class="ms-name" id="mn1">P2</div>
+      <div class="ms-sets" id="msets1"></div>
+      <div class="ms-pts" id="mpts1">0</div>
+    </div>
+  </div>
+
+  <!-- tap buttons -->
+  <div class="btns">
+    <button class="point-btn" id="btn0" onclick="addPoint(0,event)" style="background:#001a0d;">
+      <div class="btn-label">PUNTO PARA</div>
+      <div class="btn-name" id="bname0">P1</div>
+      <div class="btn-icon">▲</div>
+    </button>
+    <button class="point-btn" id="btn1" onclick="addPoint(1,event)" style="background:#1a1000;">
+      <div class="btn-label">PUNTO PARA</div>
+      <div class="btn-name" id="bname1">P2</div>
+      <div class="btn-icon">▼</div>
+    </button>
+  </div>
+
+  <!-- voz: cantar marcador -->
+  <button onclick="marcadorVoz()" style="width:100%;padding:10px;background:#0d1f3c;border:none;border-top:1px solid #1a2f50;border-bottom:1px solid #1a2f50;color:#eef3ff;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;" onactive="this.style.background='#152847'">
+    <span style="font-size:18px;">📢</span> Cantar marcador completo
+  </button>
+
+  <!-- actions -->
+  <div class="action-row">
+    <button class="act-btn" onclick="undo()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+      Deshacer
+    </button>
+    <button class="act-btn" onclick="toggleServe()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Saque
+    </button>
+    <button class="act-btn" id="vozAutoBtn" title="Auto: ON" onclick="toggleVozAuto()" style="color:var(--yellow);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      <span id="vozAutoBtn" style="font-size:10px;">Voz auto</span>
+    </button>
+    <button class="act-btn" id="vozBtn" onclick="toggleVoz()" style="color:var(--green);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      🔊
+    </button>
+    <button class="act-btn danger" onclick="if(confirm('¿Deshacer todo?'))resetAll()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      Reset
+    </button>
+  </div>
+</div>
+
+<!-- WINNER -->
+<div id="win">
+  <div class="win-trophy">🏆</div>
+  <div class="win-name" id="winName">GANADOR</div>
+  <div class="win-score" id="winScore"></div>
+  <button class="win-btn" onclick="resetAll()">Nuevo partido</button>
+</div>
+
+<script>
+const PL = ['0','15','30','40','AD'];
+const ch = new BroadcastChannel('ctq_score');
+let state = null;
+let history = [];
+
+// Ensure older saved states are compatible
+function migrateState(s){
+  if(!s) return s;
+  if(s.fmtKey===undefined) s.fmtKey = '3';
+  if(s.matchTieBreak===undefined) s.matchTieBreak = (s.fmtKey==='3mtb');
+  if(s.maxSets===undefined) s.maxSets = s.fmtKey==='1'?1:s.fmtKey==='5'?5:3;
+  if(s.mtbSuddenDeath===undefined) s.mtbSuddenDeath = false;
+  return s;
+}
+
+function setMTBMode(suddenDeath){
+  if(!state) return;
+  state.mtbSuddenDeath = suddenDeath;
+  updateMTBToggle();
+  saveAndBroadcast();
+}
+
+function updateMTBToggle(){
+  if(!state) return;
+  const isMTBactive = state.tiebreak && state.matchTieBreak && state.setsHistory[0].length===2;
+  document.getElementById('mtbToggleRow').style.display = isMTBactive ? 'flex' : 'none';
+  const sd = state.mtbSuddenDeath;
+  document.getElementById('btnAdv').style.cssText += sd
+    ? ';background:#0b1629;border-color:#1a2f50;color:#4a6080;'
+    : ';background:#00402a;border-color:#00c46a;color:#eef3ff;font-weight:700;';
+  document.getElementById('btnSD').style.cssText += sd
+    ? ';background:#3a1a00;border-color:#f5c518;color:#f5c518;font-weight:700;'
+    : ';background:#0b1629;border-color:#1a2f50;color:#4a6080;';
+}
+
+/* ── CONNECT ── */
+function tryLoad(){
+  const saved = localStorage.getItem('ctq_state');
+  if(saved){
+    try{ state=migrateState(JSON.parse(saved)); if(state&&state.names) activate(); } catch(e){}
+  }
+  ch.postMessage({type:'ping'});
+}
+
+ch.onmessage = e => {
+  if(e.data.type==='state'||e.data.type==='pong'){
+    state = migrateState(e.data.state);
+    if(state&&state.names) activate();
+    render();
+  }
+  if(e.data.type==='reset'){
+    state=null; history=[];
+    document.getElementById('main').style.display='none';
+    document.getElementById('waiting').style.display='flex';
+    document.getElementById('win').classList.remove('show');
+  }
+};
+
+function activate(){
+  document.getElementById('waiting').style.display='none';
+  document.getElementById('main').style.display='flex';
+  render();
+}
+
+function saveAndBroadcast(){
+  const s=JSON.stringify(state);
+  localStorage.setItem('ctq_state',s);
+  ch.postMessage({type:'state',state});
+}
+
+/* ── SCORING ── */
+function isMatchTieBreakSet(){
+  // True when we're about to play the deciding set in Bo3+MTB format
+  return state.matchTieBreak && state.setsHistory[0].length === 2;
+}
+
+function addPoint(p, evt){
+  if(!state||state.over) return;
+  ripple(evt, document.getElementById('btn'+p));
+  history.push(JSON.parse(JSON.stringify(state)));
+  if(history.length>60) history.shift();
+
+  if(state.tiebreak){
+    state.tbPts[p]++;
+    const target = isMatchTieBreakSet() ? 10 : 7;
+    const needAdv = isMatchTieBreakSet() ? !state.mtbSuddenDeath : true;
+    const won = state.tbPts[p]>=target && (!needAdv || state.tbPts[p]-state.tbPts[1-p]>=2);
+    if(won){
+      // In Match Tie Break, winning it = winning a "set" (and the match)
+      if(isMatchTieBreakSet()){
+        state.setsHistory[0].push(state.tbPts[0]);
+        state.setsHistory[1].push(state.tbPts[1]);
+        state.over=true; state.winner=p;
+        render(); saveAndBroadcast();
+        setTimeout(()=>showWinner(p),350);
+        return;
+      }
+      winGame(p);
+    }
+  } else {
+    state.pts[p]++;
+    const p0=state.pts[0],p1=state.pts[1];
+    if(p0>=3&&p1>=3){
+      if(p0===p1){state.pts[0]=3;state.pts[1]=3;}
+      else if(p0-p1>=2) winGame(0);
+      else if(p1-p0>=2) winGame(1);
+    } else if(state.pts[p]>=4){ winGame(p); }
+  }
+  render();
+  saveAndBroadcast();
+  if(vozAuto) setTimeout(puntajeVoz, 300);
+}
+
+function winGame(p){
+  state.games[p]++;
+  const setsNeeded=Math.ceil(state.maxSets/2);
+  const mg=state.games[p],og=state.games[1-p];
+  const wonSet=(mg>=6&&mg-og>=2)||mg===7;
+  if(wonSet){
+    state.setsHistory[0].push(state.games[0]);
+    state.setsHistory[1].push(state.games[1]);
+    state.currentSet++;
+    state.games=[0,0];state.pts=[0,0];
+    state.tiebreak=false;state.tbPts=[0,0];
+    const sw=[0,1].map(i=>state.setsHistory[i].filter((g,si)=>g>state.setsHistory[1-i][si]).length);
+    if(sw[p]>=setsNeeded){
+      state.over=true; state.winner=p;
+      setTimeout(()=>showWinner(p),350);
+      return;
+    }
+    // Anunciar set ganado
+    if(vozAuto){
+      const setIdx = state.setsHistory[0].length-1;
+      const g0=state.setsHistory[0][setIdx], g1=state.setsHistory[1][setIdx];
+      setTimeout(()=>hablar(`Set ${state.setsHistory[0].length}: ${state.names[p]} ${Math.max(g0,g1)} a ${Math.min(g0,g1)}. Juegos: ${state.names[0]} ${sw[0]}, ${state.names[1]} ${sw[1]}`,true),300);
+    }
+    // Si Bo3+MTB y vamos 1-1 sets → activar Match Tie Break
+    if(state.matchTieBreak && state.setsHistory[0].length===2){
+      state.tiebreak=true; state.tbPts=[0,0];
+      state.serving=1-state.serving;
+      if(vozAuto) setTimeout(()=>hablar('¡Comienza el Match Tie Break! Primero en llegar a diez.',true),1800);
+      return;
+    }
+  } else {
+    state.pts=[0,0];state.tiebreak=false;state.tbPts=[0,0];
+    if(state.games[0]===6&&state.games[1]===6){state.tiebreak=true;state.tbPts=[0,0];}
+  }
+  state.serving=1-state.serving;
+}
+
+function undo(){
+  if(!history.length) return;
+  state=history.pop();
+  document.getElementById('win').classList.remove('show');
+  render(); saveAndBroadcast();
+}
+
+function toggleServe(){
+  if(!state) return;
+  state.serving=1-state.serving;
+  render(); saveAndBroadcast();
+}
+
+function resetAll(){
+  state=null; history=[];
+  localStorage.removeItem('ctq_state');
+  ch.postMessage({type:'reset'});
+  document.getElementById('win').classList.remove('show');
+  document.getElementById('main').style.display='none';
+  document.getElementById('waiting').style.display='flex';
+}
+
+function showWinner(p){
+  const parts=[];
+  for(let i=0;i<state.setsHistory[0].length;i++){
+    const isMTBset = state.matchTieBreak && i===2;
+    const label = state.setsHistory[p][i]+'-'+state.setsHistory[1-p][i];
+    parts.push(isMTBset ? '['+label+']' : label);
+  }
+  document.getElementById('winName').textContent=state.names[p];
+  document.getElementById('winScore').textContent=parts.join('  ');
+  document.getElementById('win').classList.add('show');
+  saveAndBroadcast();
+  if(vozAuto){
+    const score = parts.join(', ');
+    setTimeout(()=>hablar(`¡Partido terminado! Gana ${state.names[p]}. ${score}`,true),400);
+  }
+}
+
+/* ── RENDER ── */
+function render(){
+  if(!state) return;
+  const {names,pts,games,setsHistory,tiebreak,tbPts,serving,maxSets}=state;
+
+  document.getElementById('mn0').textContent=names[0];
+  document.getElementById('mn1').textContent=names[1];
+  document.getElementById('bname0').textContent=names[0];
+  document.getElementById('bname1').textContent=names[1];
+
+  // mini pts
+  if(tiebreak){
+    document.getElementById('mpts0').textContent=tbPts[0];
+    document.getElementById('mpts1').textContent=tbPts[1];
+    const isMTB = state.matchTieBreak && setsHistory[0].length===2;
+    let tieLabel = '⚡ TIEBREAK';
+    if(isMTB) tieLabel = state.mtbSuddenDeath ? '🔥 MATCH TIE BREAK · primero en 10 gana' : '🔥 MATCH TIE BREAK · a 10 (ventaja)';
+    document.getElementById('tieMini').textContent = tieLabel;
+    document.getElementById('tieMini').classList.add('show');
+  } else {
+    document.getElementById('mpts0').textContent=PL[pts[0]];
+    document.getElementById('mpts1').textContent=PL[pts[1]];
+    document.getElementById('tieMini').classList.remove('show');
+  }
+
+  // sets
+  for(let p=0;p<2;p++){
+    const parts=[];
+    for(let i=0;i<setsHistory[0].length;i++) parts.push(setsHistory[p][i]);
+    parts.push(games[p]+'*');
+    document.getElementById('msets'+p).textContent=parts.join(' ');
+  }
+
+  // serve highlight
+  document.getElementById('mrow0').className='ms-row'+(serving===0?' sv':'');
+  document.getElementById('mrow1').className='ms-row'+(serving===1?' sv':'');
+  updateMTBToggle();
+}
+
+/* ── VOZ ── */
+let vozActiva = true;
+let vozAuto = true; // cantar automático en cada punto
+
+function hablar(texto, prioridad=false){
+  if(!vozActiva) return;
+  if(!window.speechSynthesis) return;
+  if(prioridad) window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'es-CL';   // español chileno; fallback es-ES
+  u.rate = 1.05;
+  u.pitch = 1.1;
+  u.volume = 1;
+  // Preferir voz femenina española/latinoamericana si hay
+  const voces = window.speechSynthesis.getVoices();
+  const pref = voces.find(v=> v.lang.startsWith('es') && /female|mujer|Paulina|Monica|Mónica|Laura|Luciana/i.test(v.name))
+             || voces.find(v=> v.lang.startsWith('es'));
+  if(pref) u.voice = pref;
+  window.speechSynthesis.speak(u);
+}
+
+// Cargar voces (asíncrono en algunos navegadores)
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = ()=>{};
+
+function puntajeVoz(){
+  if(!state) return;
+  const {names, pts, games, setsHistory, tiebreak, tbPts, serving} = state;
+  const n0 = names[0], n1 = names[1];
+  const srv = serving; // quien saca
+  const rx  = 1-srv;  // quien resta
+  let txt = '';
+
+  if(tiebreak){
+    const isMTB = state.matchTieBreak && setsHistory[0].length===2;
+    const tipo  = isMTB ? 'Match Tie Break' : 'Tie Break';
+    // puntos siempre desde perspectiva del servidor
+    txt = `${tipo}: ${tbPts[srv]} – ${tbPts[rx]}`;
+  } else {
+    const p0 = pts[srv], p1 = pts[rx];
+    // Casos especiales
+    if(p0===3 && p1===3){
+      txt = 'Iguales';
+    } else if(p0===4 && p1===3){
+      txt = `Ventaja ${n0===names[srv]?n0:n1}`;
+    } else if(p0===3 && p1===4){
+      txt = `Ventaja ${n0===names[rx]?n0:n1}`;
+    } else {
+      const lbl = ['cero','quince','treinta','cuarenta'];
+      txt = `${lbl[p0]} – ${lbl[p1]}`;
+    }
+  }
+  hablar(txt, true);
+}
+
+function marcadorVoz(){
+  if(!state) return;
+  const {names, games, setsHistory, tiebreak, tbPts, serving} = state;
+  const n0=names[0], n1=names[1];
+  let partes=[];
+
+  // Sets jugados
+  const sh = setsHistory;
+  for(let i=0;i<sh[0].length;i++){
+    const isMTBset = state.matchTieBreak && i===2;
+    if(isMTBset){
+      partes.push(`Match Tie Break ${sh[0][i]} a ${sh[1][i]}`);
+    } else {
+      partes.push(`Set ${i+1}: ${sh[0][i]} a ${sh[1][i]}`);
+    }
+  }
+
+  // Set en curso
+  if(!state.over){
+    if(tiebreak){
+      const isMTB = state.matchTieBreak && sh[0].length===2;
+      const tipo = isMTB ? 'Match Tie Break' : 'Tie Break';
+      partes.push(`${tipo} en curso: ${tbPts[0]} a ${tbPts[1]}`);
+    } else {
+      partes.push(`Juegos set actual: ${n0} ${games[0]}, ${n1} ${games[1]}`);
+    }
+  }
+
+  const txt = partes.length ? partes.join('. ') + '.' : 'Partido sin puntos aún.';
+  hablar(txt, true);
+}
+
+function toggleVoz(){
+  vozActiva = !vozActiva;
+  const btn = document.getElementById('vozBtn');
+  btn.textContent = vozActiva ? '🔊' : '🔇';
+  btn.style.color  = vozActiva ? 'var(--green)' : 'var(--muted)';
+  if(vozActiva) hablar('Voz activada');
+}
+
+function toggleVozAuto(){
+  vozAuto = !vozAuto;
+  const btn = document.getElementById('vozAutoBtn');
+  btn.style.color  = vozAuto ? 'var(--yellow)' : 'var(--muted)';
+  btn.title = vozAuto ? 'Auto: ON' : 'Auto: OFF';
+}
+
+/* ── RIPPLE ── */
+function ripple(e,btn){
+  const r=document.createElement('span');
+  r.className='ripple';
+  const rect=btn.getBoundingClientRect();
+  const size=Math.max(rect.width,rect.height)*1.5;
+  const x=(e.clientX-rect.left)-(size/2);
+  const y=(e.clientY-rect.top)-(size/2);
+  r.style.cssText=`width:${size}px;height:${size}px;left:${x}px;top:${y}px`;
+  btn.appendChild(r);
+  setTimeout(()=>r.remove(),600);
+}
+
+// Init
+tryLoad();
+setInterval(()=>{ ch.postMessage({type:'ping'}); }, 3000);
+</script>
+</body>
+</html>
