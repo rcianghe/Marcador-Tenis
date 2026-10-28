@@ -190,6 +190,14 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
 #finBtns{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .opt.c{justify-content:center}
 .opt.ok{justify-content:center;background:linear-gradient(#0f8f4a,#04602e);border-color:#19ff7a;color:#fff}
+.sb-row .p-name{word-break:normal;overflow-wrap:normal;min-width:0;font-size:22px}
+.match-info{font-size:22px;white-space:nowrap}
+.info b{font-size:15px}
+.deco{flex:0 0 100px;min-height:100px}
+.ball{width:64px;height:64px;bottom:14px}
+.set-num{font-size:36px;min-width:18px}
+.sets-area{gap:4px;padding-right:8px}
+.pts-box{width:76px}
 </style>
 </head>
 <body>
@@ -525,7 +533,7 @@ function renderBoard(){
   document.getElementById('bn0').textContent = names[0];
   document.getElementById('bn1').textContent = names[1];
   document.getElementById('matchInfo').textContent = FMT_LABELS[state.fmtKey]||'';
-  document.getElementById('infoFmt').textContent = FMT_LABELS[state.fmtKey]||'';
+  document.getElementById('infoFmt').textContent = (FMT_LABELS[state.fmtKey]||'').replace('Match Tie Break','Match TB');
   document.getElementById('infoTipo').textContent = state.mtbSuddenDeath?'Muere o muere':'Normal';
   document.getElementById('hS3').textContent = state.matchTieBreak?'MTB':'S3';
 
@@ -548,7 +556,8 @@ function renderBoard(){
   // Sets
   const totalSets = Math.ceil(ms/2)*2-1;
   for(let si=0;si<5;si++){
-    const show = si < totalSets;
+    const played = setsHistory[0].length;
+    const show = si < totalSets && (si < played || (si === played && !state.over && !(tiebreak && state.matchTieBreak && played===2)));
     ['hS'+(si+1)].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.style.display=show?'':'none';
@@ -574,6 +583,7 @@ function renderBoard(){
   document.getElementById('row0').className='sb-row'+(serving===0?' serving':'')+(winner===0?' winner':'');
   document.getElementById('row1').className='sb-row'+(serving===1?' serving':'')+(winner===1?' winner':'');
   updMTB();
+  ajustarNombres();
 }
 
 function setP(p,txt,cls){
@@ -717,6 +727,12 @@ function deshacerRegistro(){
   if(state&&state.regId){ setPend(pend().filter(r=>r.id!==state.regId)); delete state.regId; saveAndBroadcast(); mostrarToast('Registro deshecho'); }
   finStep('pregunta');
 }
+function ajustarNombres(){
+  const els=[...document.querySelectorAll('.p-name')]; let m=22;
+  els.forEach(el=>{ let f=22; el.style.fontSize=f+'px'; while(f>12 && el.scrollWidth>el.clientWidth+1){ f--; el.style.fontSize=f+'px'; } m=Math.min(m,f); });
+  els.forEach(el=>{ el.style.fontSize=m+'px'; });
+}
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>{ if(state&&state.names) ajustarNombres(); });
 function cfgOpen(v){document.getElementById('cfg').classList.toggle('show',v);}
 function undo(){
   if(state&&state.regId){mostrarToast('Primero deshaz el registro');return;}
