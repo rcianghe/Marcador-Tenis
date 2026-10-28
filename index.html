@@ -185,6 +185,11 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
 .modo.esc .track i{left:18px;background:#19ff7a;box-shadow:0 0 8px #19ff7a}
 #toast{position:fixed;top:calc(env(safe-area-inset-top) + 72px);left:50%;transform:translateX(-50%);background:#061226;border:1.5px solid #19ff7a;color:#fff;font-weight:700;padding:8px 18px;border-radius:20px;box-shadow:0 0 18px rgba(25,255,122,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 #toast.show{opacity:1}
+.fin-res{text-align:center;font-size:17px;font-weight:800;color:#fff}
+.fin-q{text-align:center;color:#59b4ff;font-size:14px}
+#finBtns{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.opt.c{justify-content:center}
+.opt.ok{justify-content:center;background:linear-gradient(#0f8f4a,#04602e);border-color:#19ff7a;color:#fff}
 </style>
 </head>
 <body>
@@ -346,10 +351,17 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
   <div class="deco"><svg class="ball"><use href="#i-bigball"/></svg></div>
 </div>
 <div id="toast"></div>
+<div id="fin" class="modal" onclick="if(event.target===this)finOpen(false)"><div class="sheet">
+  <div class="sheet-t" id="finT"></div>
+  <div class="fin-res" id="finRes"></div>
+  <div class="fin-q" id="finQ"></div>
+  <div id="finBtns"></div>
+</div></div>
 <div id="cfg" class="modal" onclick="if(event.target===this)cfgOpen(false)"><div class="sheet">
   <div class="sheet-t">Configuración</div>
   <button class="opt" onclick="toggleVozCelular()"><span>Voz del marcador</span><b id="vozCelBtn">🔊</b></button>
   <button class="opt" onclick="cantarPuntaje();cfgOpen(false)"><span>Cantar puntaje</span><b>📢</b></button>
+  <button class="opt" id="regBtn" style="display:none" onclick="cfgOpen(false);finStep(state&&state.regId?'hecho':'pregunta');finOpen(true)">Registro en escalerilla</button>
   <button class="opt" id="mtbBtn" onclick="toggleMTB()">Tie break</button>
   <button class="opt danger" onclick="cfgOpen(false);confirmReset()">Nuevo partido</button>
   <button class="opt" onclick="cfgOpen(false)">Cerrar</button>
@@ -666,14 +678,48 @@ function addPoint(p){
   }
   renderBoard(); saveAndBroadcast();
   hablarCel(say.join(' '));
+  if(state.over&&modo==='escalerilla'&&!state.regId) setTimeout(()=>{finStep('pregunta');finOpen(true);},1400);
   if(navigator.vibrate) navigator.vibrate(done?[80,50,80]:30);
 }
 let modo=(function(){try{return localStorage.getItem('ctq_modo')==='escalerilla'?'escalerilla':'amistoso';}catch(e){return 'amistoso';}})();
 function pintarModo(){const e=modo==='escalerilla',sw=document.getElementById('modoSw');sw.classList.toggle('esc',e);sw.setAttribute('aria-checked',e);document.getElementById('mEsc').classList.toggle('on',e);document.getElementById('mAmi').classList.toggle('on',!e);}
-function toggleModo(){modo=modo==='escalerilla'?'amistoso':'escalerilla';try{localStorage.setItem('ctq_modo',modo);}catch(e){}pintarModo();const t=document.getElementById('toast');t.textContent='Modo '+(modo==='escalerilla'?'Escalerilla':'Amistoso');t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1500);}
+function toggleModo(){modo=modo==='escalerilla'?'amistoso':'escalerilla';try{localStorage.setItem('ctq_modo',modo);}catch(e){}pintarModo();if(state)updMTB();const t=document.getElementById('toast');t.textContent='Modo '+(modo==='escalerilla'?'Escalerilla':'Amistoso');t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1500);}
 pintarModo();
+function mostrarToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1800);}
+/* ── Registro en escalerilla (por ahora solo local, sin envío) ── */
+function pend(){try{return JSON.parse(localStorage.getItem('ctq_pend')||'[]');}catch(e){return [];}}
+function setPend(a){try{localStorage.setItem('ctq_pend',JSON.stringify(a));}catch(e){}}
+function resumenFin(){const n=state.names,w=state.winner,sh=state.setsHistory;return `${n[w]} ganó ${sh[0].map((_,i)=>sh[w][i]+'-'+sh[1-w][i]).join(' · ')}`;}
+function finOpen(v){document.getElementById('fin').classList.toggle('show',v);}
+function finStep(st){
+  if(!state||!state.over) return;
+  const g=id=>document.getElementById(id), b=(t,c,f)=>`<button class="opt ${c}" onclick="${f}">${t}</button>`;
+  g('finRes').textContent=resumenFin();
+  if(st==='pregunta'){
+    g('finT').textContent='Partido terminado';
+    g('finQ').textContent='¿Registrar el marcador en la escalerilla?';
+    g('finBtns').innerHTML=b('Sí, registrar','ok',"finStep('confirma')")+b('No','c','finOpen(false)')+b('↶ Corregir último punto','c','finOpen(false);undo()');
+  } else if(st==='confirma'){
+    g('finT').textContent='¿Confirmas el registro?';
+    g('finQ').textContent='Revisa que los jugadores y el marcador estén correctos.';
+    g('finBtns').innerHTML=b('Confirmar registro','ok','registrar()')+b('Volver','c',"finStep('pregunta')");
+  } else {
+    g('finT').textContent='Registro guardado ✔';
+    g('finQ').textContent='Queda pendiente en este teléfono. Aún no se envía a la escalerilla.';
+    g('finBtns').innerHTML=b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
+  }
+}
+function registrar(){
+  const rec={id:Date.now(),fecha:new Date().toISOString(),jugadores:state.names,sets:state.setsHistory,ganador:state.winner,formato:state.fmtKey,tbMuereOMuere:!!state.mtbSuddenDeath,modo:modo};
+  setPend(pend().concat(rec)); state.regId=rec.id; saveAndBroadcast(); finStep('hecho');
+}
+function deshacerRegistro(){
+  if(state&&state.regId){ setPend(pend().filter(r=>r.id!==state.regId)); delete state.regId; saveAndBroadcast(); mostrarToast('Registro deshecho'); }
+  finStep('pregunta');
+}
 function cfgOpen(v){document.getElementById('cfg').classList.toggle('show',v);}
 function undo(){
+  if(state&&state.regId){mostrarToast('Primero deshaz el registro');return;}
   if(!history.length) return;
   state=JSON.parse(history.pop());
   renderBoard(); saveAndBroadcast();
@@ -688,6 +734,7 @@ function toggleMTB(){ if(!state) return; state.mtbSuddenDeath=!state.mtbSuddenDe
 function updMTB(){
   const b=document.getElementById('mtbBtn'); if(!b||!state) return;
   b.style.display='';
+  const rb=document.getElementById('regBtn'); if(rb) rb.style.display=(state.over&&modo==='escalerilla')?'':'none';
   b.textContent='Tie break: '+(state.mtbSuddenDeath?'muere o muere':'diferencia de 2');
 }
 
