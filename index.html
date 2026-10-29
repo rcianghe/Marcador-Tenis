@@ -198,6 +198,7 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
 .set-num{font-size:36px;min-width:18px}
 .sets-area{gap:4px;padding-right:8px}
 .pts-box{width:76px}
+#ntfyIn,#clubIn{width:100%;box-sizing:border-box;background:#050f21;border:1.5px solid #1fd9c0;border-radius:12px;color:#fff;font-size:18px;padding:12px 14px}
 </style>
 </head>
 <body>
@@ -229,6 +230,7 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
   <div class="setup-title">Nuevo Partido</div>
 
   <!-- Jugador 1 -->
+  <div id="clubBox" style="display:none"><div class="sec"><svg class="ic"><use href="#i-trophy"/></svg>Club</div><input id="clubIn" list="clubList" placeholder="Nombre del club" autocomplete="off"><datalist id="clubList"></datalist></div>
   <div class="pcard">
     <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Jugador 1 · Tú</div>
     <div style="display:flex;gap:8px;">
@@ -301,7 +303,7 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
 <!-- BOARD -->
 <div id="board">
   <div class="match-info" id="matchInfo"></div>
-  <div class="tap-hint">Toca al jugador que gana el punto</div>
+  <div class="tap-hint" id="tapHint">Toca al jugador que gana el punto</div>
 
   <div class="sb">
     <div class="sb-header">
@@ -369,6 +371,9 @@ body{background:radial-gradient(800px 380px at 90% -4%,rgba(0,150,255,.25),trans
   <div class="sheet-t">Configuración</div>
   <button class="opt" onclick="toggleVozCelular()"><span>Voz del marcador</span><b id="vozCelBtn">🔊</b></button>
   <button class="opt" onclick="cantarPuntaje();cfgOpen(false)"><span>Cantar puntaje</span><b>📢</b></button>
+  <div class="opt" style="flex-direction:column;align-items:stretch;gap:8px"><span>Canal ntfy (aquí llegan los resultados)</span>
+    <input id="ntfyIn" placeholder="nombre-secreto-del-canal" autocomplete="off" autocapitalize="off" oninput="ntfySet(this.value)">
+    <div style="display:flex;gap:8px"><button class="opt c" style="flex:1" onclick="ntfyGenerar()">Generar canal</button><button class="opt c" style="flex:1" onclick="ntfyProbar()">Enviar prueba</button></div></div>
   <button class="opt" id="regBtn" style="display:none" onclick="cfgOpen(false);finStep(state&&state.regId?'hecho':'pregunta');finOpen(true)">Registro en escalerilla</button>
   <button class="opt" id="mtbBtn" onclick="toggleMTB()">Tie break</button>
   <button class="opt danger" onclick="cfgOpen(false);confirmReset()">Nuevo partido</button>
@@ -463,6 +468,7 @@ function freshState(){
 }
 
 function startMatch(){
+  if(modo==='escalerilla'){ const c=document.getElementById('clubIn').value.trim(); if(!c){ mostrarToast('Escribe el club'); document.getElementById('clubIn').focus(); return; } }
   const n1 = buildLabel(1);
   const n2 = buildLabel(2);
   state = freshState();
@@ -471,6 +477,10 @@ function startMatch(){
   state.maxSets = fmtKey==='1' ? 1 : fmtKey==='5' ? 5 : 3;
   state.matchTieBreak = (fmtKey==='3mtb');
   state.serving = state.tbFirst = firstServe; state.mtbSuddenDeath = tbSD; history = [];
+  const v=id=>document.getElementById(id).value.trim();
+  state.full=[(v('p1n')+' '+v('p1a')).trim()||state.names[0],(v('p2n')+' '+v('p2a')).trim()||state.names[1]];
+  state.club = modo==='escalerilla' ? v('clubIn') : '';
+  if(state.club){ try{ localStorage.setItem('ctq_club',state.club); let l=JSON.parse(localStorage.getItem('ctq_clubes')||'[]'); if(!l.includes(state.club)){ l.unshift(state.club); localStorage.setItem('ctq_clubes',JSON.stringify(l.slice(0,12))); } }catch(e){} }
   hablarCel(`Partido iniciado. Saca ${state.names[firstServe]}.`);
   wake();
   saveAndBroadcast();
@@ -534,6 +544,7 @@ function renderBoard(){
   document.getElementById('bn1').textContent = names[1];
   document.getElementById('matchInfo').textContent = FMT_LABELS[state.fmtKey]||'';
   document.getElementById('infoFmt').textContent = (FMT_LABELS[state.fmtKey]||'').replace('Match Tie Break','Match TB');
+  document.getElementById('tapHint').innerHTML=(state.club?'<b style="color:#19ff7a">'+state.club.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</b><br>':'')+'Toca al jugador que gana el punto';
   document.getElementById('infoTipo').textContent = state.mtbSuddenDeath?'Muere o muere':'Normal';
   document.getElementById('hS3').textContent = state.matchTieBreak?'MTB':'S3';
 
@@ -692,7 +703,13 @@ function addPoint(p){
   if(navigator.vibrate) navigator.vibrate(done?[80,50,80]:30);
 }
 let modo=(function(){try{return localStorage.getItem('ctq_modo')==='escalerilla'?'escalerilla':'amistoso';}catch(e){return 'amistoso';}})();
-function pintarModo(){const e=modo==='escalerilla',sw=document.getElementById('modoSw');sw.classList.toggle('esc',e);sw.setAttribute('aria-checked',e);document.getElementById('mEsc').classList.toggle('on',e);document.getElementById('mAmi').classList.toggle('on',!e);}
+function cargarClubes(){
+  let l=[];try{l=JSON.parse(localStorage.getItem('ctq_clubes')||'[]');}catch(e){}
+  if(!l.length) l=['Estadio Quilicura (CTQ)'];
+  document.getElementById('clubList').innerHTML=l.map(c=>'<option value="'+c.replace(/"/g,'&quot;')+'">').join('');
+  const i=document.getElementById('clubIn'); if(!i.value){ let u='';try{u=localStorage.getItem('ctq_club')||'';}catch(e){} i.value=u||l[0]; }
+}
+function pintarModo(){const e=modo==='escalerilla',sw=document.getElementById('modoSw');sw.classList.toggle('esc',e);sw.setAttribute('aria-checked',e);document.getElementById('mEsc').classList.toggle('on',e);document.getElementById('mAmi').classList.toggle('on',!e);const cb=document.getElementById('clubBox');if(cb)cb.style.display=e?'':'none';if(e)cargarClubes();}
 function toggleModo(){modo=modo==='escalerilla'?'amistoso':'escalerilla';try{localStorage.setItem('ctq_modo',modo);}catch(e){}pintarModo();if(state)updMTB();const t=document.getElementById('toast');t.textContent='Modo '+(modo==='escalerilla'?'Escalerilla':'Amistoso');t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1500);}
 pintarModo();
 function mostrarToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),1800);}
@@ -707,24 +724,54 @@ function finStep(st){
   g('finRes').textContent=resumenFin();
   if(st==='pregunta'){
     g('finT').textContent='Partido terminado';
-    g('finQ').textContent='¿Registrar el marcador en la escalerilla?';
-    g('finBtns').innerHTML=b('Sí, registrar','ok',"finStep('confirma')")+b('No','c','finOpen(false)')+b('↶ Corregir último punto','c','finOpen(false);undo()');
+    g('finQ').textContent='¿Enviar el resultado para registrarlo en la escalerilla?';
+    g('finBtns').innerHTML=b('Sí, enviar','ok',"finStep('confirma')")+b('No','c','finOpen(false)')+b('↶ Corregir último punto','c','finOpen(false);undo()');
   } else if(st==='confirma'){
     g('finT').textContent='¿Confirmas el registro?';
-    g('finQ').textContent='Revisa que los jugadores y el marcador estén correctos.';
-    g('finBtns').innerHTML=b('Confirmar registro','ok','registrar()')+b('Volver','c',"finStep('pregunta')");
+    g('finQ').textContent='Club: '+(state.club||'sin indicar')+'. Se enviará a tu ntfy.';
+    g('finBtns').innerHTML=b('Confirmar y enviar','ok','registrar()')+b('Volver','c',"finStep('pregunta')");
   } else {
-    g('finT').textContent='Registro guardado ✔';
-    g('finQ').textContent='Queda pendiente en este teléfono. Aún no se envía a la escalerilla.';
-    g('finBtns').innerHTML=b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
+    g('finT').textContent='Resultado registrado ✔';
+    const st=state.ntfy;
+    g('finQ').textContent = st==='ok' ? 'Enviado a tu ntfy ✔. Deshacer no borra la notificación ya enviada.' : st==='pend' ? (ntfyTopic() ? 'No se pudo enviar (¿sin internet?). Se reintentará solo al volver la conexión.' : 'Falta el canal ntfy (Config.). Puedes enviarlo por WhatsApp.') : 'Enviando…';
+    g('finBtns').innerHTML=(st==='ok'?'':b('Reintentar envío','ok','reintentar()'))+b('Enviar por WhatsApp','c','abrirWA()')+b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
   }
 }
+function ntfyTopic(){ try{ return (localStorage.getItem('ctq_ntfy')||'').trim(); }catch(e){ return ''; } }
+function ntfySet(v){ v=v.replace(/[^A-Za-z0-9_-]/g,''); try{ localStorage.setItem('ctq_ntfy',v); }catch(e){} const i=document.getElementById('ntfyIn'); if(i&&i.value!==v) i.value=v; }
+function ntfyGenerar(){ const a=new Uint8Array(9); crypto.getRandomValues(a); const t='ctq-'+Array.from(a,x=>x.toString(36).padStart(2,'0')).join('').slice(0,14); ntfySet(t); document.getElementById('ntfyIn').value=t; mostrarToast('Canal creado: suscríbete en la app ntfy'); }
+async function ntfyEnviar(texto,titulo){
+  const t=ntfyTopic(); if(!t) throw new Error('sin canal');
+  const r=await fetch('https://ntfy.sh/'+encodeURIComponent(t),{method:'POST',body:texto,headers:{'Title':titulo||'Resultado CTQ Marcador','Tags':'tennis','Priority':'4'}});
+  if(!r.ok) throw new Error('http '+r.status);
+}
+function ntfyProbar(){ ntfyEnviar('Prueba de CTQ Marcador: todo OK','Prueba').then(()=>mostrarToast('Prueba enviada')).catch(()=>mostrarToast(ntfyTopic()?'No se pudo enviar':'Primero crea el canal')); }
+async function enviarPend(){
+  const l=pend(); let cambio=false;
+  for(const r of l){ if(r.enviado||!r.texto) continue; try{ await ntfyEnviar(r.texto); r.enviado=true; cambio=true; }catch(e){ break; } }
+  if(cambio) setPend(l.slice(-50));
+  return l.every(r=>r.enviado||!r.texto);
+}
+function reintentar(){ state.ntfy='envio'; finStep('hecho'); enviarPend().then(ok=>{ state.ntfy=ok?'ok':'pend'; saveAndBroadcast(); finStep('hecho'); }); }
+window.addEventListener('online',()=>{ enviarPend(); });
+{ const i=document.getElementById('ntfyIn'); if(i) i.value=ntfyTopic(); }
+enviarPend();
+const WA_NUM='56974723654';
+function textoWA(){
+  const f=state.full||state.names, sh=state.setsHistory;
+  return ['🎾 *Resultado CTQ Marcador*','Club: '+(state.club||'(sin indicar)'),'Fecha: '+(state.regFecha||new Date().toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'})),
+    'Jugador 1: '+f[0],'Jugador 2: '+f[1],'Ganó: '+f[state.winner],'Marcador (J1–J2): '+sh[0].map((_,i)=>sh[0][i]+'-'+sh[1][i]).join(' · '),
+    'Formato: '+(FMT_LABELS[state.fmtKey]||'')+' · Tie break: '+(state.mtbSuddenDeath?'muere o muere':'diferencia de 2')].join('\n');
+}
+function abrirWA(){ window.open('https://wa.me/'+WA_NUM+'?text='+encodeURIComponent(textoWA()),'_blank'); }
 function registrar(){
-  const rec={id:Date.now(),fecha:new Date().toISOString(),jugadores:state.names,sets:state.setsHistory,ganador:state.winner,formato:state.fmtKey,tbMuereOMuere:!!state.mtbSuddenDeath,modo:modo};
-  setPend(pend().concat(rec)); state.regId=rec.id; saveAndBroadcast(); finStep('hecho');
+  state.regFecha=new Date().toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'});
+  const rec={texto:textoWA().replace(/\*/g,''),enviado:false,id:Date.now(),fecha:new Date().toISOString(),club:state.club||'',jugadores:state.full||state.names,sets:state.setsHistory,ganador:state.winner,formato:state.fmtKey,tbMuereOMuere:!!state.mtbSuddenDeath,modo:modo};
+  setPend(pend().concat(rec).slice(-50)); state.regId=rec.id; state.ntfy='envio'; saveAndBroadcast(); finStep('hecho');
+  enviarPend().then(ok=>{ state.ntfy=ok?'ok':'pend'; saveAndBroadcast(); if(document.getElementById('fin').classList.contains('show')) finStep('hecho'); });
 }
 function deshacerRegistro(){
-  if(state&&state.regId){ setPend(pend().filter(r=>r.id!==state.regId)); delete state.regId; saveAndBroadcast(); mostrarToast('Registro deshecho'); }
+  if(state&&state.regId){ setPend(pend().filter(r=>r.id!==state.regId)); delete state.regId; delete state.ntfy; saveAndBroadcast(); mostrarToast('Registro deshecho'); }
   finStep('pregunta');
 }
 function ajustarNombres(){
