@@ -736,7 +736,7 @@ function finStep(st){
     g('finT').textContent='Resultado registrado ✔';
     const st=state.ntfy;
     g('finQ').textContent = st==='ok' ? 'Enviado a tu ntfy ✔. Volviendo al inicio…' : st==='pend' ? (ntfyTopic() ? 'No se pudo enviar (¿sin internet?). Se reintentará solo al volver la conexión.' : 'Falta el canal ntfy (Config.). Puedes enviarlo por WhatsApp.') : 'Enviando…';
-    g('finBtns').innerHTML= st==='ok' ? b('Quedarme aquí','c','finOpen(false)')+b('Deshacer registro','c','deshacerRegistro()') : b('Reintentar envío','ok','reintentar()')+b('Enviar por WhatsApp','c','abrirWA()')+b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
+    g('finBtns').innerHTML= st==='ok' ? b('Quedarme aquí','c','quedarme()')+b('Deshacer registro','c','deshacerRegistro()') : b('Reintentar envío','ok','reintentar()')+b('Enviar por WhatsApp','c','abrirWA()')+b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
   }
 }
 function ntfyTopic(){ try{ return (localStorage.getItem('ctq_ntfy')||'').trim(); }catch(e){ return ''; } }
@@ -758,6 +758,7 @@ function envioOk(){
   state.ntfy='ok'; saveAndBroadcast(); finStep('hecho'); hablarCel('Resultado enviado.');
   clearTimeout(window._an); window._an=setTimeout(()=>{ if(state&&state.over&&state.ntfy==='ok') volverInicio(); },3500);
 }
+function quedarme(){ if(state){ state.keep=true; saveAndBroadcast(); } finOpen(false); }
 function reintentar(){ state.ntfy='envio'; finStep('hecho'); enviarPend().then(ok=>{ if(!state) return; if(ok) envioOk(); else { state.ntfy='pend'; saveAndBroadcast(); finStep('hecho'); } }); }
 window.addEventListener('online',()=>{ enviarPend(); });
 { const i=document.getElementById('ntfyIn'); if(i) i.value=ntfyTopic(); }
@@ -830,6 +831,7 @@ try{history=JSON.parse(localStorage.getItem('ctq_hist')||'[]');}catch(e){}
 if(saved){
   try{
     state=JSON.parse(saved);
+    if(state&&state.over&&!state.keep&&(state.ntfy==='ok'||!state.club)) volverInicio();
     if(state&&state.names){
       document.getElementById('setup').style.display='none';
       document.getElementById('board').style.display='flex';
@@ -837,6 +839,7 @@ if(saved){
     }
   }catch(e){}
 }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&state&&state.over&&!state.keep&&state.ntfy==='ok') volverInicio(); });
 if(!navigator.standalone && !matchMedia('(display-mode: standalone)').matches){ const h=document.getElementById('instalaHint'); if(h) h.style.display='block'; }
 if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>
