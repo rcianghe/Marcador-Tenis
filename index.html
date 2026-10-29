@@ -489,15 +489,17 @@ function startMatch(){
   renderBoard();
 }
 
-function confirmReset(){
-  if(confirm('¿Iniciar nuevo partido?')){
-    state=null;
-    localStorage.removeItem('ctq_state');localStorage.removeItem('ctq_hist');history=[];if(window.speechSynthesis)speechSynthesis.cancel();
-    ch.postMessage({type:'reset'});
-    document.getElementById('board').style.display='none';
-    document.getElementById('setup').style.display='flex';
-  }
+function volverInicio(){
+  clearTimeout(window._an);
+  state=null;
+  localStorage.removeItem('ctq_state');localStorage.removeItem('ctq_hist');history=[];if(window.speechSynthesis)speechSynthesis.cancel();
+  ch.postMessage({type:'reset'});
+  document.getElementById('board').style.display='none';
+  document.getElementById('setup').style.display='flex';
+  document.getElementById('fin').classList.remove('show');
+  const su=document.getElementById('setup'); if(su) su.scrollTop=0;
 }
+function confirmReset(){ if(confirm('¿Iniciar nuevo partido?')) volverInicio(); }
 
 /* ── SAVE / BROADCAST ── */
 function saveAndBroadcast(){
@@ -717,7 +719,7 @@ function mostrarToast(m){const t=document.getElementById('toast');t.textContent=
 function pend(){try{return JSON.parse(localStorage.getItem('ctq_pend')||'[]');}catch(e){return [];}}
 function setPend(a){try{localStorage.setItem('ctq_pend',JSON.stringify(a));}catch(e){}}
 function resumenFin(){const n=state.names,w=state.winner,sh=state.setsHistory;return `${n[w]} ganó ${sh[0].map((_,i)=>sh[w][i]+'-'+sh[1-w][i]).join(' · ')}`;}
-function finOpen(v){document.getElementById('fin').classList.toggle('show',v);}
+function finOpen(v){document.getElementById('fin').classList.toggle('show',v); if(!v) clearTimeout(window._an);}
 function finStep(st){
   if(!state||!state.over) return;
   const g=id=>document.getElementById(id), b=(t,c,f)=>`<button class="opt ${c}" onclick="${f}">${t}</button>`;
@@ -733,8 +735,8 @@ function finStep(st){
   } else {
     g('finT').textContent='Resultado registrado ✔';
     const st=state.ntfy;
-    g('finQ').textContent = st==='ok' ? 'Enviado a tu ntfy ✔. Deshacer no borra la notificación ya enviada.' : st==='pend' ? (ntfyTopic() ? 'No se pudo enviar (¿sin internet?). Se reintentará solo al volver la conexión.' : 'Falta el canal ntfy (Config.). Puedes enviarlo por WhatsApp.') : 'Enviando…';
-    g('finBtns').innerHTML=(st==='ok'?'':b('Reintentar envío','ok','reintentar()'))+b('Enviar por WhatsApp','c','abrirWA()')+b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
+    g('finQ').textContent = st==='ok' ? 'Enviado a tu ntfy ✔. Volviendo al inicio…' : st==='pend' ? (ntfyTopic() ? 'No se pudo enviar (¿sin internet?). Se reintentará solo al volver la conexión.' : 'Falta el canal ntfy (Config.). Puedes enviarlo por WhatsApp.') : 'Enviando…';
+    g('finBtns').innerHTML= st==='ok' ? b('Quedarme aquí','c','finOpen(false)')+b('Deshacer registro','c','deshacerRegistro()') : b('Reintentar envío','ok','reintentar()')+b('Enviar por WhatsApp','c','abrirWA()')+b('Deshacer registro','c','deshacerRegistro()')+b('Cerrar','c','finOpen(false)');
   }
 }
 function ntfyTopic(){ try{ return (localStorage.getItem('ctq_ntfy')||'').trim(); }catch(e){ return ''; } }
@@ -752,7 +754,11 @@ async function enviarPend(){
   if(cambio) setPend(l.slice(-50));
   return l.every(r=>r.enviado||!r.texto);
 }
-function reintentar(){ state.ntfy='envio'; finStep('hecho'); enviarPend().then(ok=>{ state.ntfy=ok?'ok':'pend'; saveAndBroadcast(); finStep('hecho'); }); }
+function envioOk(){
+  state.ntfy='ok'; saveAndBroadcast(); finStep('hecho'); hablarCel('Resultado enviado.');
+  clearTimeout(window._an); window._an=setTimeout(()=>{ if(state&&state.over&&state.ntfy==='ok') volverInicio(); },3500);
+}
+function reintentar(){ state.ntfy='envio'; finStep('hecho'); enviarPend().then(ok=>{ if(!state) return; if(ok) envioOk(); else { state.ntfy='pend'; saveAndBroadcast(); finStep('hecho'); } }); }
 window.addEventListener('online',()=>{ enviarPend(); });
 { const i=document.getElementById('ntfyIn'); if(i) i.value=ntfyTopic(); }
 enviarPend();
@@ -768,9 +774,10 @@ function registrar(){
   state.regFecha=new Date().toLocaleString('es-CL',{dateStyle:'short',timeStyle:'short'});
   const rec={texto:textoWA().replace(/\*/g,''),enviado:false,id:Date.now(),fecha:new Date().toISOString(),club:state.club||'',jugadores:state.full||state.names,sets:state.setsHistory,ganador:state.winner,formato:state.fmtKey,tbMuereOMuere:!!state.mtbSuddenDeath,modo:modo};
   setPend(pend().concat(rec).slice(-50)); state.regId=rec.id; state.ntfy='envio'; saveAndBroadcast(); finStep('hecho');
-  enviarPend().then(ok=>{ state.ntfy=ok?'ok':'pend'; saveAndBroadcast(); if(document.getElementById('fin').classList.contains('show')) finStep('hecho'); });
+  enviarPend().then(ok=>{ if(!state) return; if(ok) envioOk(); else { state.ntfy='pend'; saveAndBroadcast(); if(document.getElementById('fin').classList.contains('show')) finStep('hecho'); } });
 }
 function deshacerRegistro(){
+  clearTimeout(window._an);
   if(state&&state.regId){ setPend(pend().filter(r=>r.id!==state.regId)); delete state.regId; delete state.ntfy; saveAndBroadcast(); mostrarToast('Registro deshecho'); }
   finStep('pregunta');
 }
